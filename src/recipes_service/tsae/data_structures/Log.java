@@ -72,10 +72,17 @@ public class Log implements Serializable{
 	 * @return true if op is inserted, false otherwise.
 	 */
 	public boolean add(Operation op){
-		// ....
+		String hostId = op.getTimestamp().getHostid();
+		List<Operation> opeList = log.get(hostId);
 		
-		// return generated automatically. Remove it when implementing your solution 
-		return false;
+		synchronized (opeList) {
+			if(opeList.isEmpty() || opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
+				opeList.add(op);
+				return true;
+			} else {
+				return false;
+			}
+		}
 	}
 	
 	/**
@@ -87,9 +94,20 @@ public class Log implements Serializable{
 	 * @return list of operations
 	 */
 	public List<Operation> listNewer(TimestampVector sum){
+		List<Operation> newList = new Vector<Operation>();
+		
+		for (String id : log.keySet()) {
+			List<Operation> opeList = log.get(id);
+			Timestamp lastSeen = sum.getLast(id);
 
-		// return generated automatically. Remove it when implementing your solution 
-		return null;
+			synchronized (opeList) {
+				for (Operation op : opeList) {
+					if (op.getTimestamp().compare(lastSeen) > 0) newList.add(op);
+				}
+			}
+		}
+		
+		return newList;
 	}
 	
 	/**
@@ -100,6 +118,22 @@ public class Log implements Serializable{
 	 * @param ack: ackSummary.
 	 */
 	public void purgeLog(TimestampMatrix ack){
+		for (String id : log.keySet()) {
+			List<Operation> opeList = log.get(id);
+			TimestampVector ackVector = ack.getTimestampVector(id);
+			
+			Iterator<Operation> iterator = opeList.iterator();
+			while (iterator.hasNext()) {
+				Operation op = iterator.next();
+				Timestamp opTS = op.getTimestamp();
+				String opId = opTS.getHostid();
+				
+				Timestamp ackTS = ackVector.getLast(opId);
+				
+				if (opTS.compare(ackTS) <= 0) iterator.remove();
+				else break;
+			}
+		}
 	}
 
 	/**
@@ -107,9 +141,11 @@ public class Log implements Serializable{
 	 */
 	@Override
 	public boolean equals(Object obj) {
+		if(this == obj) return true;
+		if (obj == null || getClass() != obj.getClass()) return false;
 		
-		// return generated automatically. Remove it when implementing your solution 
-		return false;
+		Log compLog = (Log) obj;
+		return log.equals(compLog.log);
 	}
 
 	/**

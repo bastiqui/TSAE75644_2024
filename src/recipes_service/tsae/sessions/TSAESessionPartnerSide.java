@@ -81,8 +81,8 @@ public class TSAESessionPartnerSide extends Thread{
 			// First receive originator's summary and ack
 			msg = (Message) in.readObject();
 			current_session_number = msg.getSessionNumber();
-			LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] TSAE session");
-			LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] received message: "+ msg);
+			//LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] TSAE session");
+			//LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] received message: "+ msg);
 			if (msg.type() == MsgType.AE_REQUEST){
 				// ... If AE_request (Anti Entropy Session Request message) DO
 				MessageAErequest originator=(MessageAErequest)msg;
@@ -93,7 +93,7 @@ public class TSAESessionPartnerSide extends Thread{
 						msg=new MessageOperation(op); //create new object (operation message)
 						msg.setSessionNumber(current_session_number); //Exchange order with next one. First set sessionNumber
 						out.writeObject(msg);
-						LSimLogger.log(Level.TRACE,"[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
+						//LSimLogger.log(Level.TRACE,"[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
 					}
 				}
 
@@ -104,7 +104,7 @@ public class TSAESessionPartnerSide extends Thread{
 				msg = new MessageAErequest(localSummary, localAck); //create new request
 				msg.setSessionNumber(current_session_number);
 				out.writeObject(msg);
-				LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
+				//LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
 
 	            // receive operations
 				List<Operation> ops=new ArrayList<Operation>(); //create new object (array of operations)
@@ -113,8 +113,9 @@ public class TSAESessionPartnerSide extends Thread{
 				while (msg.type() == MsgType.OPERATION){
 					Operation op=((MessageOperation)msg).getOperation();
 					ops.add(op); 			//First add operation (addRecipe)
+					System.out.println(op);
 					msg = (Message) in.readObject();
-					LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] received message: "+ msg);
+					//LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] received message: "+ msg);
 				}
 
 				// receive message to inform about the ending of the TSAE session
@@ -123,7 +124,7 @@ public class TSAESessionPartnerSide extends Thread{
 					msg = new MessageEndTSAE();
 					msg.setSessionNumber(current_session_number);
 		            out.writeObject(msg);
-					LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
+					//LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
 
 					synchronized(serverData){ //to synchronize for avoiding interference (Two actions issued by different threads may interleave)
 						/*for(Operation op : ops){
@@ -144,6 +145,6 @@ public class TSAESessionPartnerSide extends Thread{
 		}catch (IOException e) {
 	    }
 
-		LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] End TSAE session");
+		//LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] End TSAE session");
 	}
 }

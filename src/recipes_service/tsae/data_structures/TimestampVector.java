@@ -20,8 +20,6 @@
 
 package recipes_service.tsae.data_structures;
 
-
-
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -38,19 +36,19 @@ import lsim.library.api.LSimLogger;
  *
  */
 public class TimestampVector implements Serializable{
-	// Only for the zip file with the correct solution of phase1.Needed for the logging system for the phase1. sgeag_2018p 
+	// Only for the zip file with the correct solution of phase1.Needed for the logging system for the phase1. sgeag_2018p
 //	private transient LSimCoordinator lsim = LSimFactory.getCoordinatorInstance();
 	// Needed for the logging system sgeag@2017
 //	private transient LSimWorker lsim = LSimFactory.getWorkerInstance();
-	
+
 	private static final long serialVersionUID = -765026247959198886L;
 	/**
 	 * This class stores a summary of the timestamps seen by a node.
 	 * For each node, stores the timestamp of the last received operation.
 	 */
-	
+
 	private ConcurrentHashMap<String, Timestamp> timestampVector= new ConcurrentHashMap<String, Timestamp>();
-	
+
 	public TimestampVector (List<String> participants){
 		// create and empty TimestampVector
 		for (Iterator<String> it = participants.iterator(); it.hasNext(); ){
@@ -61,34 +59,41 @@ public class TimestampVector implements Serializable{
 	}
 
 	/**
-	 * Updates the timestamp vector with a new timestamp. 
+	 * Updates the timestamp vector with a new timestamp.
 	 * @param timestamp
 	 */
 	public void updateTimestamp(Timestamp timestamp){
 		LSimLogger.log(Level.TRACE, "Updating the TimestampVectorInserting with the timestamp: "+timestamp);
 
-		// ...
+		String id = timestamp.getHostid();
+		Timestamp currentTS = timestampVector.get(id);
+
+		if (currentTS == null || timestamp.compare(currentTS) > 0) timestampVector.put(id, timestamp);
 	}
-	
+
 	/**
 	 * merge in another vector, taking the elementwise maximum
 	 * @param tsVector (a timestamp vector)
 	 */
 	public void updateMax(TimestampVector tsVector){
+		for (String id : timestampVector.keySet()) {
+			Timestamp compTS = timestampVector.get(id);
+			Timestamp currentTS = timestampVector.get(id);
+
+			if (compTS != null && (currentTS == null || compTS.compare(currentTS) > 0)) timestampVector.put(id, compTS);
+		}
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param node
 	 * @return the last timestamp issued by node that has been
 	 * received.
 	 */
 	public Timestamp getLast(String node){
-		
-		// return generated automatically. Remove it when implementing your solution 
-		return null;
+		return timestampVector.get(node);
 	}
-	
+
 	/**
 	 * merges local timestamp vector with tsVector timestamp vector taking
 	 * the smallest timestamp for each node.
@@ -96,24 +101,33 @@ public class TimestampVector implements Serializable{
 	 *  @param tsVector (timestamp vector)
 	 */
 	public void mergeMin(TimestampVector tsVector){
+		for (String id: timestampVector.keySet()) {
+			Timestamp compTS = timestampVector.get(id);
+			Timestamp currentTS = timestampVector.get(id);
+
+			if (compTS != null && (currentTS == null || compTS.compare(currentTS) < 0)) timestampVector.put(id, compTS);
+		}
 	}
-	
+
 	/**
 	 * clone
 	 */
 	public TimestampVector clone(){
-		
-		// return generated automatically. Remove it when implementing your solution 
-		return null;
+		TimestampVector cloned = new TimestampVector(Arrays.asList(timestampVector.keySet().toArray(new String[0])));
+		for (String id : timestampVector.keySet()) {
+			cloned.timestampVector.put(id, timestampVector.get(id));
+		}
+		return cloned;
 	}
-	
+
 	/**
 	 * equals
 	 */
 	public boolean equals(Object obj){
-		
-		// return generated automatically. Remove it when implementing your solution 
-		return false;
+		if(this == obj) return true;
+		if(obj == null || getClass() != obj.getClass()) return false;
+		TimestampVector compVector = (TimestampVector) obj;
+		return timestampVector.equals(compVector.timestampVector);
 	}
 
 	/**
