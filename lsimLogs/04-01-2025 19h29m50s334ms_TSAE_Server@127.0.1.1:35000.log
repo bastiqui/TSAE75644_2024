@@ -1,0 +1,18 @@
+04-01-2025 19:29:50:354 TSAE_Server@127.0.1.1:35000 [INFO] : -- *** --> Server -- local node: [127.0.1.1,35000,Server@127.0.1.1:35000]
+04-01-2025 19:29:50:355 TSAE_Server@127.0.1.1:35000 [INFO] : -- *** --> Server -- participants: [Server@127.0.1.1:35000, Server@127.0.1.1:35001, Server@127.0.1.1:35002]
+04-01-2025 19:29:50:358 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] TSAE session
+04-01-2025 19:29:50:385 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] TSAE session
+04-01-2025 19:29:50:391 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] received message: MessageAErequest [session: 1, summary=Server@127.0.1.1:35000:   -1000
+Server@127.0.1.1:35002:   -1000
+Server@127.0.1.1:35001:   -1000
+]
+04-01-2025 19:29:50:391 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] sent message: MessageAErequest [session: 1, summary=Server@127.0.1.1:35000:   -1000
+Server@127.0.1.1:35002:   -1000
+Server@127.0.1.1:35001:   -1000
+]
+04-01-2025 19:29:50:407 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] TSAE session
+04-01-2025 19:29:50:407 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] received message: MessageAErequest [session: 1, summary=Server@127.0.1.1:35000:   -1000
+Server@127.0.1.1:35002:   -1000
+Server@127.0.1.1:35001:   -1000
+]
+04-01-2025 19:30:28:358 TSAE_Server@127.0.1.1:35000 [TRACE] : Updating the TimestampVectorInserting with the timestamp: Server@127.0.1.1:35000:   0

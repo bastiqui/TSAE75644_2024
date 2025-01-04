@@ -1,0 +1,107 @@
+04-01-2025 17:22:46:319 TSAE_Server@127.0.1.1:35000 [INFO] : -- *** --> Server -- local node: [127.0.1.1,35000,Server@127.0.1.1:35000]
+04-01-2025 17:22:46:319 TSAE_Server@127.0.1.1:35000 [INFO] : -- *** --> Server -- participants: [Server@127.0.1.1:35000, Server@127.0.1.1:35001, Server@127.0.1.1:35002]
+04-01-2025 17:22:46:329 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] TSAE session
+04-01-2025 17:22:46:340 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] TSAE session
+04-01-2025 17:22:46:343 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] received message: MessageAErequest [session: 1, summary=null]
+04-01-2025 17:22:46:344 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] sent message: MessageAErequest [session: 1, summary=null]
+04-01-2025 17:22:46:344 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] sent message: MessageAErequest [session: 1, summary=null]
+04-01-2025 17:22:46:373 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] sent message: MessageAErequest [session: 1, summary=null]
+04-01-2025 17:22:46:390 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] received message: MessageAErequest [session: 1, summary=null]
+04-01-2025 17:22:46:390 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] End TSAE session
+04-01-2025 17:22:46:420 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] received message: MessageAErequest [session: 1, summary=null]
+04-01-2025 17:22:46:420 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] sent message: MessageAErequest [session: 1, summary=null]
+04-01-2025 17:22:46:420 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 2] TSAE session
+04-01-2025 17:22:46:420 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 2] received message: MessageAErequest [session: 2, summary=null]
+04-01-2025 17:22:46:420 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 2] sent message: MessageAErequest [session: 2, summary=null]
+04-01-2025 17:22:46:421 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 2] sent message: MessageAErequest [session: 2, summary=null]
+04-01-2025 17:22:46:421 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] sent message: MessageEndTSAE [session: 1]
+04-01-2025 17:22:46:421 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] received message: MessageAErequest [session: 1, summary=null]
+04-01-2025 17:22:46:421 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] End TSAE session
+04-01-2025 17:22:46:421 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 2] TSAE session
+04-01-2025 17:22:46:422 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 2] sent message: MessageAErequest [session: 2, summary=null]
+04-01-2025 17:22:46:461 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 2] received message: MessageAErequest [session: 2, summary=null]
+04-01-2025 17:22:46:461 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 2] End TSAE session
+04-01-2025 17:22:46:463 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 2] received message: MessageAErequest [session: 2, summary=null]
+04-01-2025 17:22:46:463 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 2] sent message: MessageAErequest [session: 2, summary=null]
+04-01-2025 17:22:46:463 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 2] sent message: MessageEndTSAE [session: 2]
+04-01-2025 17:22:46:463 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 2] received message: MessageAErequest [session: 2, summary=null]
+04-01-2025 17:22:46:463 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 2] End TSAE session
+04-01-2025 17:23:06:325 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 3] TSAE session
+04-01-2025 17:23:06:329 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 3] sent message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:335 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] TSAE session
+04-01-2025 17:23:06:335 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] received message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:335 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] sent message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:335 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] sent message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:370 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 3] received message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:370 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 3] sent message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:370 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 3] sent message: MessageEndTSAE [session: 3]
+04-01-2025 17:23:06:371 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 3] received message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:371 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 3] End TSAE session
+04-01-2025 17:23:06:371 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 4] TSAE session
+04-01-2025 17:23:06:372 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 4] sent message: MessageAErequest [session: 4, summary=null]
+04-01-2025 17:23:06:376 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] TSAE session
+04-01-2025 17:23:06:376 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] received message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:376 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] sent message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:376 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] sent message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:377 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] received message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:377 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] End TSAE session
+04-01-2025 17:23:06:414 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 4] received message: MessageAErequest [session: 4, summary=null]
+04-01-2025 17:23:06:415 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 4] sent message: MessageAErequest [session: 4, summary=null]
+04-01-2025 17:23:06:415 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 4] sent message: MessageEndTSAE [session: 4]
+04-01-2025 17:23:06:415 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 4] received message: MessageAErequest [session: 4, summary=null]
+04-01-2025 17:23:06:415 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 4] End TSAE session
+04-01-2025 17:23:06:418 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] received message: MessageAErequest [session: 3, summary=null]
+04-01-2025 17:23:06:418 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 3] End TSAE session
+04-01-2025 17:23:11:570 TSAE_Server@127.0.1.1:35000 [TRACE] : Updating the TimestampVectorInserting with the timestamp: Server@127.0.1.1:35000:   0
+04-01-2025 17:23:26:325 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 5] TSAE session
+04-01-2025 17:23:26:326 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 5] sent message: MessageAErequest [session: 5, summary=null]
+04-01-2025 17:23:26:369 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 5] received message: MessageAErequest [session: 5, summary=null]
+04-01-2025 17:23:26:369 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 5] sent message: MessageAErequest [session: 5, summary=null]
+04-01-2025 17:23:26:369 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 5] sent message: MessageEndTSAE [session: 5]
+04-01-2025 17:23:26:369 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 5] received message: MessageAErequest [session: 5, summary=null]
+04-01-2025 17:23:26:369 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 5] End TSAE session
+04-01-2025 17:23:26:369 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 6] TSAE session
+04-01-2025 17:23:26:370 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 6] sent message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:380 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] TSAE session
+04-01-2025 17:23:26:380 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] received message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:381 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] sent message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:381 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] sent message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:411 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 6] received message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:413 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 6] sent message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:413 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 6] sent message: MessageEndTSAE [session: 6]
+04-01-2025 17:23:26:413 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 6] received message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:413 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 6] End TSAE session
+04-01-2025 17:23:26:414 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] TSAE session
+04-01-2025 17:23:26:414 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] received message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:414 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] sent message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:414 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] sent message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:421 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] received message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:421 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] End TSAE session
+04-01-2025 17:23:26:457 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] received message: MessageAErequest [session: 6, summary=null]
+04-01-2025 17:23:26:457 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 6] End TSAE session
+04-01-2025 17:23:46:325 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 7] TSAE session
+04-01-2025 17:23:46:326 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 7] sent message: MessageAErequest [session: 7, summary=null]
+04-01-2025 17:23:46:367 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 7] received message: MessageAErequest [session: 7, summary=null]
+04-01-2025 17:23:46:367 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 7] sent message: MessageAErequest [session: 7, summary=null]
+04-01-2025 17:23:46:367 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 7] sent message: MessageEndTSAE [session: 7]
+04-01-2025 17:23:46:367 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 7] received message: MessageAErequest [session: 7, summary=null]
+04-01-2025 17:23:46:367 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 7] End TSAE session
+04-01-2025 17:23:46:367 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 8] TSAE session
+04-01-2025 17:23:46:368 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 8] sent message: MessageAErequest [session: 8, summary=null]
+04-01-2025 17:23:46:373 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 7] TSAE session
+04-01-2025 17:23:46:373 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 7] received message: MessageAErequest [session: 7, summary=null]
+04-01-2025 17:23:46:373 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 7] sent message: MessageAErequest [session: 7, summary=null]
+04-01-2025 17:23:46:373 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 7] sent message: MessageAErequest [session: 7, summary=null]
+04-01-2025 17:23:46:382 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 8] TSAE session
+04-01-2025 17:23:46:382 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 8] received message: MessageAErequest [session: 8, summary=null]
+04-01-2025 17:23:46:382 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 8] sent message: MessageAErequest [session: 8, summary=null]
+04-01-2025 17:23:46:382 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 8] sent message: MessageAErequest [session: 8, summary=null]
+04-01-2025 17:23:46:410 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 8] received message: MessageAErequest [session: 8, summary=null]
+04-01-2025 17:23:46:410 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 8] sent message: MessageAErequest [session: 8, summary=null]
+04-01-2025 17:23:46:410 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 8] sent message: MessageEndTSAE [session: 8]
+04-01-2025 17:23:46:410 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 8] received message: MessageAErequest [session: 8, summary=null]
+04-01-2025 17:23:46:410 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 8] End TSAE session
+04-01-2025 17:23:46:414 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 7] received message: MessageAErequest [session: 7, summary=null]
+04-01-2025 17:23:46:414 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 7] End TSAE session
+04-01-2025 17:23:46:425 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 8] received message: MessageAErequest [session: 8, summary=null]
+04-01-2025 17:23:46:425 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 8] End TSAE session

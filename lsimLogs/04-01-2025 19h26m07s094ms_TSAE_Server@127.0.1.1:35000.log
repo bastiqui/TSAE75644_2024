@@ -1,0 +1,24 @@
+04-01-2025 19:26:07:115 TSAE_Server@127.0.1.1:35000 [INFO] : -- *** --> Server -- local node: [127.0.1.1,35000,Server@127.0.1.1:35000]
+04-01-2025 19:26:07:116 TSAE_Server@127.0.1.1:35000 [INFO] : -- *** --> Server -- participants: [Server@127.0.1.1:35000, Server@127.0.1.1:35001, Server@127.0.1.1:35002]
+04-01-2025 19:26:07:119 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] TSAE session
+04-01-2025 19:26:07:145 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] TSAE session
+04-01-2025 19:26:07:150 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] sent message: MessageAErequest [session: 1, summary=Server@127.0.1.1:35000:   -1000
+Server@127.0.1.1:35002:   -1000
+Server@127.0.1.1:35001:   -1000
+]
+04-01-2025 19:26:07:151 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionPartnerSide] [session: 1] received message: MessageAErequest [session: 1, summary=Server@127.0.1.1:35000:   -1000
+Server@127.0.1.1:35002:   -1000
+Server@127.0.1.1:35001:   -1000
+]
+04-01-2025 19:26:16:762 TSAE_Server@127.0.1.1:35000 [TRACE] : Updating the TimestampVectorInserting with the timestamp: Server@127.0.1.1:35000:   0
+04-01-2025 19:26:39:574 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 1] End TSAE session
+04-01-2025 19:26:39:574 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 2] TSAE session
+04-01-2025 19:26:39:575 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 2] End TSAE session
+04-01-2025 19:26:39:575 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 3] TSAE session
+04-01-2025 19:26:39:575 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 3] End TSAE session
+04-01-2025 19:26:39:575 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 4] TSAE session
+04-01-2025 19:26:39:575 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 4] End TSAE session
+04-01-2025 19:26:47:117 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 5] TSAE session
+04-01-2025 19:26:47:118 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 5] End TSAE session
+04-01-2025 19:26:47:118 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 6] TSAE session
+04-01-2025 19:26:47:118 TSAE_Server@127.0.1.1:35000 [TRACE] : [TSAESessionOriginatorSide] [session: 6] End TSAE session
