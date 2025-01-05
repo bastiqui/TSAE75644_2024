@@ -1,149 +1,160 @@
-/*
-* Copyright (c) Joan-Manuel Marques 2013. All rights reserved.
-* DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-*
-* This file is part of the practical assignment of Distributed Systems course.
-*
-* This code is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* This code is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this code.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 package recipes_service.tsae.data_structures;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import edu.uoc.dpcs.lsim.logger.LoggerManager.Level;
 import lsim.library.api.LSimLogger;
 
-/**
- * @author Joan-Manuel Marques
- * December 2012
- *
- */
-public class TimestampVector implements Serializable{
-	// Only for the zip file with the correct solution of phase1.Needed for the logging system for the phase1. sgeag_2018p
-//	private transient LSimCoordinator lsim = LSimFactory.getCoordinatorInstance();
-	// Needed for the logging system sgeag@2017
-//	private transient LSimWorker lsim = LSimFactory.getWorkerInstance();
+public class TimestampVector implements Serializable {
+    private static final long serialVersionUID = -765026247959198886L;
 
-	private static final long serialVersionUID = -765026247959198886L;
-	/**
-	 * This class stores a summary of the timestamps seen by a node.
-	 * For each node, stores the timestamp of the last received operation.
-	 */
+    private final ConcurrentHashMap<String, Timestamp> timestampVector = new ConcurrentHashMap<>();
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-	private ConcurrentHashMap<String, Timestamp> timestampVector= new ConcurrentHashMap<String, Timestamp>();
+    public TimestampVector(List<String> participants){
+        // Inicializamos con null timestamps
+        lock.writeLock().lock();
+        try {
+            for (String id : participants) {
+                timestampVector.put(id, new Timestamp(id, Timestamp.NULL_TIMESTAMP_SEQ_NUMBER));
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
 
-	public TimestampVector (List<String> participants){
-		// create and empty TimestampVector
-		for (Iterator<String> it = participants.iterator(); it.hasNext(); ){
-			String id = it.next();
-			// when sequence number of timestamp < 0 it means that the timestamp is the null timestamp
-			timestampVector.put(id, new Timestamp(id, Timestamp.NULL_TIMESTAMP_SEQ_NUMBER));
-		}
-	}
+    /**
+     * Actualiza (si es más reciente) el timestamp de 'timestampVector' con el timestamp proporcionado.
+     */
+    public void updateTimestamp(Timestamp timestamp){
+        if (timestamp == null) {
+            LSimLogger.log(Level.WARN, "Attempted to update TimestampVector with a null timestamp.");
+            return;
+        }
+        lock.writeLock().lock();
+        try {
+            String id = timestamp.getHostid();
+            Timestamp currentTS = timestampVector.get(id);
+            if (currentTS == null || timestamp.compare(currentTS) > 0) {
+                timestampVector.put(id, timestamp);
+                LSimLogger.log(Level.TRACE, "Updated timestamp for " + id + " to " + timestamp);
+            } else {
+                LSimLogger.log(Level.TRACE, "Skipped update for " + id
+                               + ". Current timestamp: " + currentTS
+                               + ", New timestamp: " + timestamp);
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
 
-	/**
-	 * Updates the timestamp vector with a new timestamp.
-	 * @param timestamp
-	 */
-	public void updateTimestamp(Timestamp timestamp){
-		LSimLogger.log(Level.TRACE, "Updating the TimestampVectorInserting with the timestamp: "+timestamp);
+    /**
+     * Fusiona el 'tsVector' recibido tomando el máximo para cada 'hostId'.
+     */
+    public void updateMax(TimestampVector tsVector) {
+        if (tsVector == null) return;
+        lock.writeLock().lock();
+        try {
+            for (Map.Entry<String, Timestamp> entry : tsVector.timestampVector.entrySet()) {
+                String id = entry.getKey();
+                Timestamp incomingTS = entry.getValue();
+                Timestamp localTS = this.timestampVector.get(id);
+                if (incomingTS != null && (localTS == null || incomingTS.compare(localTS) > 0)) {
+                    this.timestampVector.put(id, incomingTS);
+                }
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
 
-		String id = timestamp.getHostid();
-		Timestamp currentTS = timestampVector.get(id);
+    /**
+     * Devuelve el último timestamp conocido para el nodo 'node'.
+     */
+    public Timestamp getLast(String node){
+        lock.readLock().lock();
+        try {
+            return timestampVector.get(node);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 
-		if (currentTS == null || timestamp.compare(currentTS) > 0) timestampVector.put(id, timestamp);
-	}
+    /**
+     * Fusiona el 'tsVector' recibido tomando el mínimo para cada 'hostId'.
+     */
+    public void mergeMin(TimestampVector tsVector){
+        if (tsVector == null) return;
+        lock.writeLock().lock();
+        try {
+            for (String id : tsVector.timestampVector.keySet()) {
+                Timestamp incomingTS = tsVector.timestampVector.get(id);
+                Timestamp localTS = this.timestampVector.get(id);
+                if (incomingTS != null && (localTS == null || incomingTS.compare(localTS) < 0)) {
+                    this.timestampVector.put(id, incomingTS);
+                }
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
 
-	/**
-	 * merge in another vector, taking the elementwise maximum
-	 * @param tsVector (a timestamp vector)
-	 */
-	public void updateMax(TimestampVector tsVector){
-		for (String id : timestampVector.keySet()) {
-			Timestamp compTS = timestampVector.get(id);
-			Timestamp currentTS = timestampVector.get(id);
+    /**
+     * Devuelve una copia de este 'TimestampVector'.
+     */
+    @Override
+    public TimestampVector clone(){
+        lock.readLock().lock();
+        try {
+            TimestampVector cloned = new TimestampVector(Arrays.asList(timestampVector.keySet().toArray(new String[0])));
+            for (String id : timestampVector.keySet()) {
+                cloned.timestampVector.put(id, timestampVector.get(id));
+            }
+            return cloned;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 
-			if (compTS != null && (currentTS == null || compTS.compare(currentTS) > 0)) timestampVector.put(id, compTS);
-		}
-	}
+    /**
+     * equals
+     */
+    @Override
+    public boolean equals(Object obj){
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        TimestampVector comp = (TimestampVector) obj;
 
-	/**
-	 *
-	 * @param node
-	 * @return the last timestamp issued by node that has been
-	 * received.
-	 */
-	public Timestamp getLast(String node){
-		return timestampVector.get(node);
-	}
+        // Para comparar con seguridad, leemos ambas estructuras bajo el candado de lectura
+        lock.readLock().lock();
+        try {
+            return timestampVector.equals(comp.timestampVector);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 
-	/**
-	 * merges local timestamp vector with tsVector timestamp vector taking
-	 * the smallest timestamp for each node.
-	 * After merging, local node will have the smallest timestamp for each node.
-	 *  @param tsVector (timestamp vector)
-	 */
-	public void mergeMin(TimestampVector tsVector){
-		for (String id: timestampVector.keySet()) {
-			Timestamp compTS = timestampVector.get(id);
-			Timestamp currentTS = timestampVector.get(id);
-
-			if (compTS != null && (currentTS == null || compTS.compare(currentTS) < 0)) timestampVector.put(id, compTS);
-		}
-	}
-
-	/**
-	 * clone
-	 */
-	public TimestampVector clone(){
-		TimestampVector cloned = new TimestampVector(Arrays.asList(timestampVector.keySet().toArray(new String[0])));
-		for (String id : timestampVector.keySet()) {
-			cloned.timestampVector.put(id, timestampVector.get(id));
-		}
-		return cloned;
-	}
-
-	/**
-	 * equals
-	 */
-	public boolean equals(Object obj){
-		if(this == obj) return true;
-		if(obj == null || getClass() != obj.getClass()) return false;
-		TimestampVector compVector = (TimestampVector) obj;
-		return timestampVector.equals(compVector.timestampVector);
-	}
-
-	/**
-	 * toString
-	 */
-	@Override
-	public synchronized String toString() {
-		String all="";
-		if(timestampVector==null){
-			return all;
-		}
-		for(Enumeration<String> en=timestampVector.keys(); en.hasMoreElements();){
-			String name=en.nextElement();
-			if(timestampVector.get(name)!=null)
-				all+=timestampVector.get(name)+"\n";
-		}
-		return all;
-	}
+    /**
+     * toString
+     */
+    @Override
+    public String toString() {
+        lock.readLock().lock();
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (String key : timestampVector.keySet()) {
+                Timestamp ts = timestampVector.get(key);
+                sb.append(ts != null ? ts.toString() : "null").append("\n");
+            }
+            return sb.toString();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 }
