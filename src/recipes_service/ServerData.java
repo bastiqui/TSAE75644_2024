@@ -47,21 +47,21 @@ import recipes_service.tsae.sessions.TSAESessionOriginatorSide;
  *
  */
 public class ServerData {
-	
+
 	// server id
 	private String id;
-	
+
 	// sequence number of the last recipe timestamped by this server
 	private long seqnum=Timestamp.NULL_TIMESTAMP_SEQ_NUMBER; // sequence number (to timestamp)
 
 	// timestamp lock
 	private Object timestampLock = new Object();
-	
+
 	// TSAE data structures
 	private Log log = null;
 	private TimestampVector summary = null;
 	private TimestampMatrix ack = null;
-	
+
 	// recipes data structure
 	private Recipes recipes = new Recipes();
 
@@ -70,7 +70,7 @@ public class ServerData {
 
 	// propDegree: (default value: 0) number of TSAE sessions done each time a new data is created
 	int propDegree = 0;
-	
+
 	// Participating nodes
 	private Hosts participants;
 
@@ -86,13 +86,13 @@ public class ServerData {
 	// TODO: esborrar aquesta estructura de dades
 	// tombstones: timestamp of removed operations
 	List<Timestamp> tombstones = new Vector<Timestamp>();
-	
+
 	// end: true when program should end; false otherwise
 	private boolean end;
 
 	public ServerData(){
 	}
-	
+
 	/**
 	 * Starts the execution
 	 * @param participantss
@@ -102,7 +102,7 @@ public class ServerData {
 		this.log = new Log(participants.getIds());
 		this.summary = new TimestampVector(participants.getIds());
 		this.ack = new TimestampMatrix(participants.getIds());
-		
+
 
 		//  Sets the Timer for TSAE sessions
 	    tsae = new TSAESessionOriginatorSide(this);
@@ -113,11 +113,11 @@ public class ServerData {
 	public void stopTSAEsessions(){
 		this.tsaeSessionTimer.cancel();
 	}
-	
+
 	public boolean end(){
 		return this.end;
 	}
-	
+
 	public void setEnd(){
 		this.end = true;
 	}
@@ -140,37 +140,40 @@ public class ServerData {
 	// *** add and remove recipes
 	// ******************************
 	public synchronized void addRecipe(String recipeTitle, String recipe) {
-
-		Timestamp timestamp= nextTimestamp();
-		Recipe rcpe = new Recipe(recipeTitle, recipe, id, timestamp);
-		Operation op=new AddOperation(rcpe, timestamp);
-
-		this.log.add(op);
-		this.summary.updateTimestamp(timestamp);
-		this.recipes.add(rcpe);
-//		LSimLogger.log(Level.TRACE,"The recipe '"+recipeTitle+"' has been added");
-
-	}
-	
-	public synchronized void removeRecipe(String recipeTitle){
-		System.err.println("Error: removeRecipe method (recipesService.serverData) not yet implemented");
-	}
-	
-	private synchronized void purgeTombstones(){
-		if (ack == null){
+		if (recipeTitle == null || recipe == null) {
+			LSimLogger.log(Level.WARN, "Invalid recipe input.");
 			return;
 		}
-		TimestampVector sum = ack.minTimestampVector();
-		
-		List<Timestamp> newTombstones = new Vector<Timestamp>();
-		for(int i=0; i<tombstones.size(); i++){
-			if (tombstones.get(i).compare(sum.getLast(tombstones.get(i).getHostid()))>0){
-				newTombstones.add(tombstones.get(i));
-			}
-		}
-		tombstones = newTombstones;
+		Timestamp timestamp = nextTimestamp();
+		Recipe rcpe = new Recipe(recipeTitle, recipe, id, timestamp);
+		Operation op = new AddOperation(rcpe, timestamp);
+
+		log.add(op);
+		summary.updateTimestamp(timestamp);
+		recipes.add(rcpe);
+		LSimLogger.log(Level.TRACE, "Recipe '" + recipeTitle + "' added.");
 	}
-	
+
+	public synchronized void removeRecipe(String recipeTitle){
+		System.err.println("Error: removeRecipe method (recipesService.serverData) not yet implemented");
+		/*
+		Recipe removedRecipe = recipes.remove(recipeTitle);
+		if (removedRecipe != null) {
+			tombstones.add(removedRecipe.getTimestamp());
+			LSimLogger.log(Level.TRACE, "Recipe '" + recipeTitle + "' removed.");
+		} else {
+			LSimLogger.log(Level.WARN, "Recipe not found: " + recipeTitle);
+		}
+		*/
+	}
+
+	private synchronized void purgeTombstones() {
+		if (ack == null) return;
+
+		TimestampVector minAckVector = ack.minTimestampVector();
+		tombstones.removeIf(ts -> ts.compare(minAckVector.getLast(ts.getHostid())) <= 0);
+	}
+
 	// ****************************************************************************
 	// *** operations to get the TSAE data structures. Used to send to evaluation
 	// ****************************************************************************
@@ -191,7 +194,7 @@ public class ServerData {
 	// *** getters and setters
 	// ******************************
 	public void setId(String id){
-		this.id = id;		
+		this.id = id;
 	}
 	public String getId(){
 		return this.id;
@@ -222,17 +225,17 @@ public class ServerData {
 	public TSAESessionOriginatorSide getTSAESessionOriginatorSide(){
 		return this.tsae;
 	}
-	
+
 	// ******************************
 	// *** other
 	// ******************************
-	
+
 	public List<Host> getRandomPartners(int num){
 		return participants.getRandomPartners(num);
 	}
-	
+
 	/**
-	 * waits until the Server is ready to receive TSAE sessions from partner servers   
+	 * waits until the Server is ready to receive TSAE sessions from partner servers
 	 */
 	public synchronized void waitServerConnected(){
 		while (!SimulationData.getInstance().isConnected()){
@@ -244,12 +247,28 @@ public class ServerData {
 			}
 		}
 	}
-	
+
 	/**
 	 * 	Once the server is connected notifies to ServerPartnerSide that it is ready
-	 *  to receive TSAE sessions from partner servers  
-	 */ 
+	 *  to receive TSAE sessions from partner servers
+	 */
 	public synchronized void notifyServerConnected(){
 		notifyAll();
 	}
+
+	// *******************
+	// *** PERS
+	// *******************
+
+	public void execOperation(Operation op) {
+		if (op instanceof AddOperation) {
+			AddOperation addOp = (AddOperation) op;
+			Recipe rcpe = new Recipe(addOp.getRecipe().getTitle(), addOp.getRecipe().getRecipe(), addOp.getRecipe().getAuthor(), addOp.getRecipe().getTimestamp());
+			this.recipes.add(rcpe);
+		} else if (op instanceof RemoveOperation) {
+			RemoveOperation removeOp = (RemoveOperation) op;
+			this.removeRecipe(removeOp.getRecipeTitle());
+		}
+	}
+
 }
