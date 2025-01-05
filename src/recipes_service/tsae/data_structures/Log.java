@@ -29,10 +29,14 @@ import java.util.Vector;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import recipes_service.data.Operation;
+import recipes_service.tsae.data_structures.TimestampMatrix;
+import recipes_service.tsae.data_structures.TimestampVector;
+
 //LSim logging system imports sgeag@2017
 //import lsim.coordinator.LSimCoordinator;
 import edu.uoc.dpcs.lsim.logger.LoggerManager.Level;
@@ -40,77 +44,75 @@ import lsim.library.api.LSimLogger;
 
 /**
  * @author Joan-Manuel Marques, Daniel Lázaro Iglesias
- * December 2012
+ *         December 2012
  *
  */
-public class Log implements Serializable{
-	// Only for the zip file with the correct solution of phase1.Needed for the logging system for the phase1. sgeag_2018p
-//	private transient LSimCoordinator lsim = LSimFactory.getCoordinatorInstance();
-	// Needed for the logging system sgeag@2017
-//	private transient LSimWorker lsim = LSimFactory.getWorkerInstance();
+public class Log implements Serializable {
+    // Only for the zip file with the correct solution of phase1.Needed for the
+    // logging system for the phase1. sgeag_2018p
+    // private transient LSimCoordinator lsim =
+    // LSimFactory.getCoordinatorInstance();
+    // Needed for the logging system sgeag@2017
+    // private transient LSimWorker lsim = LSimFactory.getWorkerInstance();
 
-	private static final long serialVersionUID = -4864990265268259700L;
-	/**
-	 * This class implements a log, that stores the operations
-	 * received  by a client.
-	 * They are stored in a ConcurrentHashMap (a hash table),
-	 * that stores a list of operations for each member of
-	 * the group.
-	 */
-	private ConcurrentHashMap<String, List<Operation>> log= new ConcurrentHashMap<>();
-	private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private static final long serialVersionUID = -4864990265268259700L;
+    /**
+     * This class implements a log, that stores the operations
+     * received by a client.
+     * They are stored in a ConcurrentHashMap (a hash table),
+     * that stores a list of operations for each member of
+     * the group.
+     */
+    // private ConcurrentHashMap<String, List<Operation>> log= new
+    // ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CopyOnWriteArrayList<Operation>> log = new ConcurrentHashMap<>();
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-	public Log(List<String> participants){
-		lock.writeLock().lock();
-        try {
-            for (String p : participants) {
-                log.put(p, new ArrayList<Operation>());
-            }
-        } finally {
-            lock.writeLock().unlock();
+    public Log(List<String> participants) {
+        for (String participant : participants) {
+            log.put(participant, new CopyOnWriteArrayList<>());
         }
-	}
+    }
 
-	/**
-	 * inserts an operation into the log. Operations are
-	 * inserted in order. If the last operation for
-	 * the user is not the previous operation than the one
-	 * being inserted, the insertion will fail.
-	 *
-	 * @param op
-	 * @return true if op is inserted, false otherwise.
-	 */
-	public boolean add(Operation op) {
-    lock.writeLock().lock();
-    try {
+    /**
+     * inserts an operation into the log. Operations are
+     * inserted in order. If the last operation for
+     * the user is not the previous operation than the one
+     * being inserted, the insertion will fail.
+     *
+     * @param op
+     * @return true if op is inserted, false otherwise.
+     */
+    public boolean add(Operation op) {
         String hostId = op.getTimestamp().getHostid();
-        List<Operation> opeList = log.computeIfAbsent(hostId, k -> new ArrayList<>());
-        if (opeList.isEmpty() ||
-            opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
+        CopyOnWriteArrayList<Operation> opeList = log.computeIfAbsent(hostId, k -> new CopyOnWriteArrayList<>());
+
+        if (opeList.isEmpty() || opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
             opeList.add(op);
             return true;
         }
         return false;
-    } finally {
-        lock.writeLock().unlock();
     }
-}
 
-	/**
-	 * Checks the received summary (sum) and determines the operations
-	 * contained in the log that have not been seen by
-	 * the proprietary of the summary.
-	 * Returns them in an ordered list.
-	 * @param sum
-	 * @return list of operations
-	 */
-	public List<Operation> listNewer(TimestampVector sum){
-		lock.readLock().lock();
+    /**
+     * Checks the received summary (sum) and determines the operations
+     * contained in the log that have not been seen by
+     * the proprietary of the summary.
+     * Returns them in an ordered list.
+     * 
+     * @param sum
+     * @return list of operations
+     */
+    public List<Operation> listNewer(TimestampVector sum) {
+        List<Operation> newList = new ArrayList<>();
+        lock.readLock().lock();
         try {
-            List<Operation> newList = new ArrayList<>();
-            for (Map.Entry<String, List<Operation>> entry : log.entrySet()) {
+            for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
                 String id = entry.getKey();
-                List<Operation> opeList = entry.getValue();
+                CopyOnWriteArrayList<Operation> opeList = entry.getValue();
+                if (opeList.isEmpty())
+                    continue;
+
                 Timestamp lastSeen = sum.getLast(id);
                 for (Operation op : opeList) {
                     if (op.getTimestamp().compare(lastSeen) > 0) {
@@ -118,67 +120,64 @@ public class Log implements Serializable{
                     }
                 }
             }
-            return newList;
         } finally {
             lock.readLock().unlock();
         }
-	}
+        return newList;
+    }
 
-	/**
-	 * Removes from the log the operations that have
-	 * been acknowledged by all the members
-	 * of the group, according to the provided
-	 * ackSummary.
-	 * @param ack: ackSummary.
-	 */
-	public void purgeLog(TimestampMatrix ack){
-		lock.writeLock().lock();
+    /**
+     * Removes from the log the operations that have
+     * been acknowledged by all the members
+     * of the group, according to the provided
+     * ackSummary.
+     * 
+     * @param ack: ackSummary.
+     */
+    public void purgeLog(TimestampMatrix ack) {
+        lock.writeLock().lock();
         try {
-            for (Map.Entry<String, List<Operation>> entry : log.entrySet()) {
+            for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
                 String id = entry.getKey();
-                List<Operation> opeList = entry.getValue();
-                Iterator<Operation> iterator = opeList.iterator();
+                CopyOnWriteArrayList<Operation> opeList = entry.getValue();
+
                 TimestampVector ackVector = ack.getTimestampVector(id);
-                while (iterator.hasNext()) {
-                    Operation op = iterator.next();
-                    if (op.getTimestamp().compare(
-                        ackVector.getLast(op.getTimestamp().getHostid())) <= 0) {
-                        iterator.remove();
-                    } else {
-                        break;
-                    }
-                }
+                opeList.removeIf(
+                        op -> op.getTimestamp().compare(ackVector.getLast(op.getTimestamp().getHostid())) <= 0);
             }
         } finally {
             lock.writeLock().unlock();
         }
-	}
+    }
 
-	/**
-	 * equals
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		lock.readLock().lock();
+    /**
+     * equals
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null || getClass() != obj.getClass())
+            return false;
+
+        lock.readLock().lock();
         try {
-            if (this == obj) return true;
-            if (obj == null || getClass() != obj.getClass()) return false;
             Log other = (Log) obj;
             return log.equals(other.log);
         } finally {
             lock.readLock().unlock();
         }
-	}
+    }
 
-	/**
-	 * toString
-	 */
-	@Override
-	public synchronized String toString() {
-		lock.readLock().lock();
+    /**
+     * toString
+     */
+    @Override
+    public String toString() {
+        lock.readLock().lock();
         try {
             StringBuilder sb = new StringBuilder();
-            for (List<Operation> sublog : log.values()) {
+            for (CopyOnWriteArrayList<Operation> sublog : log.values()) {
                 for (Operation op : sublog) {
                     sb.append(op.toString()).append("\n");
                 }
@@ -187,5 +186,5 @@ public class Log implements Serializable{
         } finally {
             lock.readLock().unlock();
         }
-	}
+    }
 }
