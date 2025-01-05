@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.TimerTask;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
 
 import recipes_service.ServerData;
 import recipes_service.activity_simulation.SimulationData;
@@ -47,37 +48,41 @@ import lsim.library.api.LSimLogger;
 
 /**
  * @author Joan-Manuel Marques
- * December 2012
+ *         December 2012
  *
  */
-public class TSAESessionOriginatorSide extends TimerTask{
+public class TSAESessionOriginatorSide extends TimerTask {
 	private static AtomicInteger session_number = new AtomicInteger(0);
 
 	private ServerData serverData;
-	public TSAESessionOriginatorSide(ServerData serverData){
+
+	private final Object sessionLock = new Object();
+
+	public TSAESessionOriginatorSide(ServerData serverData) {
 		super();
-		this.serverData=serverData;
+		this.serverData = serverData;
 	}
 
 	/**
 	 * Implementation of the TimeStamped Anti-Entropy protocol
 	 */
-	public void run(){
+	public void run() {
 		sessionWithN(serverData.getNumberSessions());
 	}
 
 	/**
 	 * This method performs num TSAE sessions
 	 * with num random servers
+	 * 
 	 * @param num
 	 */
-	public void sessionWithN(int num){
-		if(!SimulationData.getInstance().isConnected())
+	public void sessionWithN(int num) {
+		if (!SimulationData.getInstance().isConnected())
 			return;
-		List<Host> partnersTSAEsession= serverData.getRandomPartners(num);
+		List<Host> partnersTSAEsession = serverData.getRandomPartners(num);
 		Host n;
-		for(int i=0; i<partnersTSAEsession.size(); i++){
-			n=partnersTSAEsession.get(i);
+		for (int i = 0; i < partnersTSAEsession.size(); i++) {
+			n = partnersTSAEsession.get(i);
 			sessionTSAE(n);
 		}
 	}
@@ -85,100 +90,87 @@ public class TSAESessionOriginatorSide extends TimerTask{
 	/**
 	 * This method perform a TSAE session
 	 * with the partner server n
+	 * 
 	 * @param n
 	 */
-	private void sessionTSAE(Host n){
+	private void sessionTSAE(Host n) {
 		int current_session_number = session_number.incrementAndGet();
 		if (n == null) return;
 
+		//LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] TSAE session");
+
 		Socket socket = null;
+		synchronized (sessionLock) {
+			try {
+				socket = new Socket(n.getAddress(), n.getPort());
+				ObjectInputStream_DS in = new ObjectInputStream_DS(socket.getInputStream());
+				ObjectOutputStream_DS out = new ObjectOutputStream_DS(socket.getOutputStream());
 
-		LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: "+current_session_number+"] TSAE session");
+				TimestampVector localSummary = serverData.getSummary().clone();
+				serverData.getAck().update(serverData.getId(), localSummary);
+				TimestampMatrix localAck = serverData.getAck().clone();
 
-		try {
-			socket = new Socket(n.getAddress(), n.getPort());
-			ObjectInputStream_DS in = new ObjectInputStream_DS(socket.getInputStream());
-			ObjectOutputStream_DS out = new ObjectOutputStream_DS(socket.getOutputStream());
+				// Enviar solicitud AE
+				MessageAErequest requestMsg = new MessageAErequest(localSummary, localAck);
+				requestMsg.setSessionNumber(current_session_number);
+				out.writeObject(requestMsg);
+				//LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] sent message: " + requestMsg);
 
-			TimestampVector localSummary;
-        	TimestampMatrix localAck;
-
-        	synchronized (serverData) {
-	            localSummary = serverData.getSummary().clone();
-            	serverData.getAck().update(serverData.getId(), localSummary);
-            	localAck = serverData.getAck().clone();
-        	}
-
-			// Send to partner: local's summary and ack
-			MessageAErequest requestmsg = new MessageAErequest(localSummary, localAck);
-			requestmsg.setSessionNumber(current_session_number);
-			out.writeObject(requestmsg);
-			LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: "+current_session_number+"] sent message: "+requestmsg);
-
-            // receive operations from partner
-			Message msg = (Message) in.readObject();
-			while (msg != null && msg.type() == MsgType.OPERATION) {
-				Operation operation = ((MessageOperation) msg).getOperation();
-				synchronized (serverData) {
+				// Procesar mensajes de entrada
+				Message msg = (Message) in.readObject();
+				while (msg != null && msg.type() == MsgType.OPERATION) {
+					LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] sent message: " + msg);
+					Operation operation = ((MessageOperation) msg).getOperation();
 					serverData.getLog().add(operation);
 					serverData.execOperation(operation);
 					serverData.getSummary().updateTimestamp(operation.getTimestamp());
 					serverData.getAck().update(serverData.getId(), serverData.getSummary());
+					msg = (Message) in.readObject();
 				}
-				msg = (Message) in.readObject();
-			}
 
-			// Send operations newers than partner's summary
-			TimestampVector partnerSummary = ((MessageAErequest) msg).getSummary();
-			TimestampMatrix partnerAck = ((MessageAErequest) msg).getAck();
-        	List<Operation> newOperations;
-        	synchronized (serverData) {
-	            newOperations = serverData.getLog().listNewer(partnerSummary);
-				serverData.getAck().updateMax(partnerAck);
-        	}
-			if (newOperations != null) {
-				for (Operation operation : newOperations) {
-					MessageOperation opeMSG = new MessageOperation(operation);
-					opeMSG.setSessionNumber(current_session_number);
-					out.writeObject(opeMSG);
-				}
-			}
+				if (msg != null && msg.type() == MsgType.AE_REQUEST) {
+					TimestampVector partnerSummary = ((MessageAErequest) msg).getSummary();
+					TimestampMatrix partnerAck = ((MessageAErequest) msg).getAck();
 
-            // Send end of session
-			MessageEndTSAE endMSG = new MessageEndTSAE();
-			endMSG.setSessionNumber(current_session_number);
-			out.writeObject(endMSG);
-
-			// Confirm end
-			msg = (Message) in.readObject();
-			if (msg.type() == MsgType.END_TSAE) {
-				LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] TSAE session ended");
-				synchronized(serverData){
-					serverData.getSummary().updateMax(partnerSummary);
+					List<Operation> newOperations = serverData.getLog().listNewer(partnerSummary);
 					serverData.getAck().updateMax(partnerAck);
-					serverData.getAck().update(serverData.getId(), serverData.getSummary());
-					// serverData.getLog().purgeLog(serverData.getAck());  // FASE 3
-				}
-			}
 
-			socket.close();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			LSimLogger.log(Level.FATAL, "[TSAESessionOriginatorSide] [session: "+current_session_number+"]" + e.getMessage());
-			e.printStackTrace();
-            System.exit(1);
-		} catch (IOException e) {
-			LSimLogger.log(Level.WARN, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] IOException: " + e.getMessage());
-		} finally {
-			if (socket != null && !socket.isClosed()) {
+					if (newOperations != null) {
+						for (Operation operation : newOperations) {
+							MessageOperation operationMsg = new MessageOperation(operation);
+							operationMsg.setSessionNumber(current_session_number);
+							out.writeObject(operationMsg);
+						}
+					}
+
+					// Enviar END_TSAE
+					MessageEndTSAE endMsg = new MessageEndTSAE();
+					endMsg.setSessionNumber(current_session_number);
+					out.writeObject(endMsg);
+
+					// Verificar END_TSAE
+					msg = (Message) in.readObject();
+					if (msg != null && msg.type() == MsgType.END_TSAE) {
+						//LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] TSAE session ended");
+						serverData.getSummary().updateMax(partnerSummary);
+						serverData.getAck().updateMax(partnerAck);
+						serverData.getAck().update(serverData.getId(), serverData.getSummary());
+					}
+				} else {
+					LSimLogger.log(Level.WARN, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] Invalid or null AE_REQUEST message received.");
+				}
+			} catch (ClassNotFoundException e) {
+				LSimLogger.log(Level.WARN, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] ClassNotFound: " + e.getMessage());
+			} catch (IOException e) {
+				LSimLogger.log(Level.WARN, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] IOException: " + e.getMessage());
+			} finally {
 				try {
 					socket.close();
 				} catch (IOException e) {
-					LSimLogger.log(Level.WARN, "Error closing socket: " + e.getMessage());
+					LSimLogger.log(Level.WARN, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] Error closing socket: " + e.getMessage());
 				}
+				//LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] End TSAE session");
 			}
 		}
-
-		LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: "+current_session_number+"] End TSAE session");
 	}
 }
