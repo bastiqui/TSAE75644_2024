@@ -24,6 +24,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
 import java.util.Vector;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 import edu.uoc.dpcs.lsim.logger.LoggerManager.Level;
 import lsim.library.api.LSimLogger;
@@ -52,10 +56,11 @@ public class ServerData {
 	private String id;
 
 	// sequence number of the last recipe timestamped by this server
-	private long seqnum=Timestamp.NULL_TIMESTAMP_SEQ_NUMBER; // sequence number (to timestamp)
+	//private long seqnum=Timestamp.NULL_TIMESTAMP_SEQ_NUMBER; // sequence number (to timestamp)
+	private AtomicLong seqnum = new AtomicLong(Timestamp.NULL_TIMESTAMP_SEQ_NUMBER);
 
 	// timestamp lock
-	private Object timestampLock = new Object();
+	//private final Object sessionLock = new Object();
 
 	// TSAE data structures
 	private Log log = null;
@@ -85,10 +90,11 @@ public class ServerData {
 
 	// TODO: esborrar aquesta estructura de dades
 	// tombstones: timestamp of removed operations
-	List<Timestamp> tombstones = new Vector<Timestamp>();
+	//List<Timestamp> tombstones = new Vector<Timestamp>();
+	private final List<Timestamp> tombstones = new CopyOnWriteArrayList<>();
 
 	// end: true when program should end; false otherwise
-	private boolean end;
+	private boolean end = false;
 
 	public ServerData(){
 	}
@@ -103,15 +109,15 @@ public class ServerData {
 		this.summary = new TimestampVector(participants.getIds());
 		this.ack = new TimestampMatrix(participants.getIds());
 
-
-		//  Sets the Timer for TSAE sessions
-	    tsae = new TSAESessionOriginatorSide(this);
-		tsaeSessionTimer = new Timer();
+		tsae = new TSAESessionOriginatorSide(this);
+        tsaeSessionTimer = new Timer();
 		tsaeSessionTimer.scheduleAtFixedRate(tsae, sessionDelay, sessionPeriod);
 	}
 
 	public void stopTSAEsessions(){
-		this.tsaeSessionTimer.cancel();
+		if (tsaeSessionTimer != null) {
+            tsaeSessionTimer.cancel();
+        }
 	}
 
 	public boolean end(){
@@ -125,34 +131,28 @@ public class ServerData {
 	// ******************************
 	// *** timestamps
 	// ******************************
-	private Timestamp nextTimestamp(){
-		Timestamp nextTimestamp = null;
-		synchronized (timestampLock){
-			if (seqnum == Timestamp.NULL_TIMESTAMP_SEQ_NUMBER){
-				seqnum = -1;
-			}
-			nextTimestamp = new Timestamp(id, ++seqnum);
-		}
-		return nextTimestamp;
-	}
+	private Timestamp nextTimestamp() {
+        return new Timestamp(id, seqnum.incrementAndGet());
+    }
 
 	// ******************************
 	// *** add and remove recipes
 	// ******************************
-	public synchronized void addRecipe(String recipeTitle, String recipe) {
-		if (recipeTitle == null || recipe == null) {
-			LSimLogger.log(Level.WARN, "Invalid recipe input.");
-			return;
-		}
-		Timestamp timestamp = nextTimestamp();
-		Recipe rcpe = new Recipe(recipeTitle, recipe, id, timestamp);
-		Operation op = new AddOperation(rcpe, timestamp);
+	public void addRecipe(String recipeTitle, String recipe) {
+        if (recipeTitle == null || recipe == null) {
+            LSimLogger.log(Level.WARN, "Invalid recipe input.");
+            return;
+        }
 
-		log.add(op);
-		summary.updateTimestamp(timestamp);
-		recipes.add(rcpe);
-		LSimLogger.log(Level.TRACE, "Recipe '" + recipeTitle + "' added.");
-	}
+        Timestamp timestamp = nextTimestamp();
+        Recipe rcpe = new Recipe(recipeTitle, recipe, id, timestamp);
+        Operation op = new AddOperation(rcpe, timestamp);
+
+        log.add(op);
+        summary.updateTimestamp(timestamp);
+        recipes.add(rcpe);
+        LSimLogger.log(Level.TRACE, "Recipe '" + recipeTitle + "' added.");
+    }
 
 	public synchronized void removeRecipe(String recipeTitle){
 		System.err.println("Error: removeRecipe method (recipesService.serverData) not yet implemented");
@@ -264,10 +264,11 @@ public class ServerData {
 		if (op instanceof AddOperation) {
 			AddOperation addOp = (AddOperation) op;
 			Recipe rcpe = new Recipe(addOp.getRecipe().getTitle(), addOp.getRecipe().getRecipe(), addOp.getRecipe().getAuthor(), addOp.getRecipe().getTimestamp());
-			this.recipes.add(rcpe);
+			recipes.add(rcpe);
+			log.add(op);
 		} else if (op instanceof RemoveOperation) {
 			RemoveOperation removeOp = (RemoveOperation) op;
-			this.removeRecipe(removeOp.getRecipeTitle());
+			recipes.remove(removeOp.getRecipeTitle());
 		}
 	}
 
