@@ -26,7 +26,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Vector;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import recipes_service.data.Operation;
 //LSim logging system imports sgeag@2017
@@ -40,7 +44,7 @@ import lsim.library.api.LSimLogger;
  *
  */
 public class Log implements Serializable{
-	// Only for the zip file with the correct solution of phase1.Needed for the logging system for the phase1. sgeag_2018p 
+	// Only for the zip file with the correct solution of phase1.Needed for the logging system for the phase1. sgeag_2018p
 //	private transient LSimCoordinator lsim = LSimFactory.getCoordinatorInstance();
 	// Needed for the logging system sgeag@2017
 //	private transient LSimWorker lsim = LSimFactory.getWorkerInstance();
@@ -50,41 +54,48 @@ public class Log implements Serializable{
 	 * This class implements a log, that stores the operations
 	 * received  by a client.
 	 * They are stored in a ConcurrentHashMap (a hash table),
-	 * that stores a list of operations for each member of 
+	 * that stores a list of operations for each member of
 	 * the group.
 	 */
-	private ConcurrentHashMap<String, List<Operation>> log= new ConcurrentHashMap<String, List<Operation>>();  
+	private ConcurrentHashMap<String, List<Operation>> log= new ConcurrentHashMap<>();
+	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
 	public Log(List<String> participants){
-		// create an empty log
-		for (Iterator<String> it = participants.iterator(); it.hasNext(); ){
-			log.put(it.next(), new Vector<Operation>());
-		}
+		lock.writeLock().lock();
+        try {
+            for (String p : participants) {
+                log.put(p, new ArrayList<Operation>());
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
 	}
 
 	/**
-	 * inserts an operation into the log. Operations are 
-	 * inserted in order. If the last operation for 
-	 * the user is not the previous operation than the one 
+	 * inserts an operation into the log. Operations are
+	 * inserted in order. If the last operation for
+	 * the user is not the previous operation than the one
 	 * being inserted, the insertion will fail.
-	 * 
+	 *
 	 * @param op
 	 * @return true if op is inserted, false otherwise.
 	 */
-	public boolean add(Operation op){
-		String hostId = op.getTimestamp().getHostid();
-		List<Operation> opeList = log.get(hostId);
-		
-		synchronized (opeList) {
-			if(opeList.isEmpty() || opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
-				opeList.add(op);
-				return true;
-			} else {
-				return false;
-			}
-		}
-	}
-	
+	public boolean add(Operation op) {
+    lock.writeLock().lock();
+    try {
+        String hostId = op.getTimestamp().getHostid();
+        List<Operation> opeList = log.computeIfAbsent(hostId, k -> new ArrayList<>());
+        if (opeList.isEmpty() ||
+            opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
+            opeList.add(op);
+            return true;
+        }
+        return false;
+    } finally {
+        lock.writeLock().unlock();
+    }
+}
+
 	/**
 	 * Checks the received summary (sum) and determines the operations
 	 * contained in the log that have not been seen by
@@ -94,46 +105,53 @@ public class Log implements Serializable{
 	 * @return list of operations
 	 */
 	public List<Operation> listNewer(TimestampVector sum){
-		List<Operation> newList = new Vector<Operation>();
-		
-		for (String id : log.keySet()) {
-			List<Operation> opeList = log.get(id);
-			Timestamp lastSeen = sum.getLast(id);
-
-			synchronized (opeList) {
-				for (Operation op : opeList) {
-					if (op.getTimestamp().compare(lastSeen) > 0) newList.add(op);
-				}
-			}
-		}
-		
-		return newList;
+		lock.readLock().lock();
+        try {
+            List<Operation> newList = new ArrayList<>();
+            for (Map.Entry<String, List<Operation>> entry : log.entrySet()) {
+                String id = entry.getKey();
+                List<Operation> opeList = entry.getValue();
+                Timestamp lastSeen = sum.getLast(id);
+                for (Operation op : opeList) {
+                    if (op.getTimestamp().compare(lastSeen) > 0) {
+                        newList.add(op);
+                    }
+                }
+            }
+            return newList;
+        } finally {
+            lock.readLock().unlock();
+        }
 	}
-	
+
 	/**
 	 * Removes from the log the operations that have
 	 * been acknowledged by all the members
 	 * of the group, according to the provided
-	 * ackSummary. 
+	 * ackSummary.
 	 * @param ack: ackSummary.
 	 */
 	public void purgeLog(TimestampMatrix ack){
-		for (String id : log.keySet()) {
-			List<Operation> opeList = log.get(id);
-			TimestampVector ackVector = ack.getTimestampVector(id);
-			
-			Iterator<Operation> iterator = opeList.iterator();
-			while (iterator.hasNext()) {
-				Operation op = iterator.next();
-				Timestamp opTS = op.getTimestamp();
-				String opId = opTS.getHostid();
-				
-				Timestamp ackTS = ackVector.getLast(opId);
-				
-				if (opTS.compare(ackTS) <= 0) iterator.remove();
-				else break;
-			}
-		}
+		lock.writeLock().lock();
+        try {
+            for (Map.Entry<String, List<Operation>> entry : log.entrySet()) {
+                String id = entry.getKey();
+                List<Operation> opeList = entry.getValue();
+                Iterator<Operation> iterator = opeList.iterator();
+                TimestampVector ackVector = ack.getTimestampVector(id);
+                while (iterator.hasNext()) {
+                    Operation op = iterator.next();
+                    if (op.getTimestamp().compare(
+                        ackVector.getLast(op.getTimestamp().getHostid())) <= 0) {
+                        iterator.remove();
+                    } else {
+                        break;
+                    }
+                }
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
 	}
 
 	/**
@@ -141,11 +159,15 @@ public class Log implements Serializable{
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if(this == obj) return true;
-		if (obj == null || getClass() != obj.getClass()) return false;
-		
-		Log compLog = (Log) obj;
-		return log.equals(compLog.log);
+		lock.readLock().lock();
+        try {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            Log other = (Log) obj;
+            return log.equals(other.log);
+        } finally {
+            lock.readLock().unlock();
+        }
 	}
 
 	/**
@@ -153,15 +175,17 @@ public class Log implements Serializable{
 	 */
 	@Override
 	public synchronized String toString() {
-		String name="";
-		for(Enumeration<List<Operation>> en=log.elements();
-		en.hasMoreElements(); ){
-		List<Operation> sublog=en.nextElement();
-		for(ListIterator<Operation> en2=sublog.listIterator(); en2.hasNext();){
-			name+=en2.next().toString()+"\n";
-		}
-	}
-		
-		return name;
+		lock.readLock().lock();
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (List<Operation> sublog : log.values()) {
+                for (Operation op : sublog) {
+                    sb.append(op.toString()).append("\n");
+                }
+            }
+            return sb.toString();
+        } finally {
+            lock.readLock().unlock();
+        }
 	}
 }
