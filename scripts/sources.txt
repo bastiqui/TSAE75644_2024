@@ -40,8 +40,8 @@
 ../src/recipes_service/tsae/data_structures/Timestamp.java
 ../src/recipes_service/tsae/data_structures/TimestampMatrix.java
 ../src/recipes_service/tsae/data_structures/TimestampVector.java
-../src/recipes_service/tsae/sessions/TSAESessionOriginatorSide.java
 ../src/recipes_service/tsae/sessions/TSAESessionPartnerSide.java
+../src/recipes_service/tsae/sessions/TSAESessionOriginatorSide.java
 ../src/recipes_service/Phase1.java
 ../src/recipes_service/Server.java
 ../src/recipes_service/ServerData.java
