@@ -32,34 +32,37 @@ public class TimestampVector implements Serializable {
      * Updates the timestamp in the vector if it is more recent.
      */
     public void updateTimestamp(Timestamp timestamp) {
-        if (timestamp == null) {
-            LSimLogger.log(Level.WARN, "Attempted to update TimestampVector with a null timestamp.");
-            return;
-        }
-        timestampVector.compute(timestamp.getHostid(), (id, currentTS) -> {
-            if (currentTS == null || timestamp.compare(currentTS) > 0) {
-                LSimLogger.log(Level.TRACE, "Updated timestamp for " + id + " to " + timestamp);
-                return timestamp;
-            }
-            LSimLogger.log(Level.TRACE, "Skipped update for " + id
-                    + ". Current timestamp: " + currentTS
-                    + ", New timestamp: " + timestamp);
-            return currentTS;
-        });
+    if (timestamp == null) {
+        LSimLogger.log(Level.WARN, "Attempted to update TimestampVector with a null timestamp.");
+        return;
     }
+
+    timestampVector.compute(timestamp.getHostid(), (id, currentTS) -> {
+        if (currentTS == null || timestamp.compare(currentTS) > 0) {
+            return timestamp;
+        }
+        return currentTS;
+    });
+}
+
 
     /**
      * Merges the received vector, keeping the maximum for each hostId.
      */
     public void updateMax(TimestampVector tsVector) {
-        if (tsVector == null)
-            return;
-
-        tsVector.timestampVector.forEach((id, incomingTS) -> timestampVector.compute(id,
-                (key, localTS) -> (incomingTS != null && (localTS == null || incomingTS.compare(localTS) > 0))
-                        ? incomingTS
-                        : localTS));
+    if (tsVector == null) {
+        LSimLogger.log(Level.WARN, "Attempted to merge with a null TimestampVector.");
+        return;
     }
+
+    tsVector.timestampVector.forEach((id, incomingTS) -> timestampVector.compute(id,
+            (key, localTS) -> {
+                if (incomingTS != null && (localTS == null || incomingTS.compare(localTS) > 0)) {
+                    return incomingTS;
+                }
+                return localTS;
+            }));
+}
 
     /**
      * Returns the last known timestamp for the given node.
@@ -72,13 +75,43 @@ public class TimestampVector implements Serializable {
      * Merges the received vector, keeping the minimum for each hostId.
      */
     public void mergeMin(TimestampVector tsVector) {
-        if (tsVector == null)
+        if (tsVector == null) {
+            LSimLogger.log(Level.WARN, "Attempted to mergeMin with a null TimestampVector.");
             return;
+        }
 
         tsVector.timestampVector.forEach((id, incomingTS) -> timestampVector.compute(id,
-                (key, localTS) -> (incomingTS != null && (localTS == null || incomingTS.compare(localTS) < 0))
-                        ? incomingTS
-                        : localTS));
+                (key, localTS) -> {
+                    if (incomingTS == null) {
+                        // If the incoming timestamp is null, keep the local one
+                        return localTS;
+                    }
+                    if (localTS == null || incomingTS.compare(localTS) < 0) {
+                        // If the local timestamp is null or greater, use the incoming one
+                        return incomingTS;
+                    }
+                    return localTS;
+                }));
+    }
+
+    public void updateMaxWithTolerance(TimestampVector tsVector) {
+        if (tsVector == null) {
+            LSimLogger.log(Level.WARN, "Attempted to updateMaxWithTolerance with a null TimestampVector.");
+            return;
+        }
+
+        tsVector.timestampVector.forEach((id, incomingTS) -> timestampVector.compute(id,
+                (key, localTS) -> {
+                    if (incomingTS == null) {
+                        // If the incoming timestamp is null, keep the local one
+                        return localTS;
+                    }
+                    if (localTS == null || incomingTS.compare(localTS) > 0) {
+                        // If the local timestamp is null or smaller, use the incoming one
+                        return incomingTS;
+                    }
+                    return localTS;
+                }));
     }
 
     /**
@@ -96,6 +129,7 @@ public class TimestampVector implements Serializable {
             lock.readLock().unlock();
         }
     }
+
 
     /**
      * Checks equality between two TimestampVectors.
