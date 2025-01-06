@@ -49,10 +49,10 @@ import lsim.library.api.LSimLogger; //TODO check login system
  *
  */
 public class TSAESessionPartnerSide extends Thread{
-	
+
 	private Socket socket = null;
 	private ServerData serverData = null;
-	
+
 	public TSAESessionPartnerSide(Socket socket, ServerData serverData) {
 		super("TSAEPartnerSideThread");
 		this.socket = socket;
@@ -71,7 +71,7 @@ public class TSAESessionPartnerSide extends Thread{
 			//to synchronize for avoiding interference (Two actions issued by different threads may interleave)
 			TimestampVector localSummary;
 			TimestampMatrix localAck;
-			
+
 			synchronized(serverData){
 				localSummary=this.serverData.getSummary().clone();
 				serverData.getAck().update(serverData.getId(),localSummary);
@@ -96,8 +96,8 @@ public class TSAESessionPartnerSide extends Thread{
 				}
 
 				// send to originator: local's summary and ack
-				//Next 2 lines passed upstream before synchronize.  
-				//TimestampVector localSummary = null; 
+				//Next 2 lines passed upstream before synchronize.
+				//TimestampVector localSummary = null;
 				//TimestampMatrix localAck = null;
 				msg = new MessageAErequest(localSummary, localAck); //create new request
 				msg.setSessionNumber(current_session_number);
@@ -109,39 +109,39 @@ public class TSAESessionPartnerSide extends Thread{
 				msg = (Message) in.readObject();
 				//lsim.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] received message: "+ msg);
 				while (msg.type() == MsgType.OPERATION){
-					Operation op=((MessageOperation)msg).getOperation(); 
+					Operation op=((MessageOperation)msg).getOperation();
 					ops.add(op); 			//First add operation (addRecipe)
 					msg = (Message) in.readObject();
 					//lsim.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] received message: "+ msg);
 				}
-				
+
 				// receive message to inform about the ending of the TSAE session
 				if (msg.type() == MsgType.END_TSAE){
 					// send and "end of TSAE session" message
 					msg = new MessageEndTSAE();
 					msg.setSessionNumber(current_session_number);
-		            out.writeObject(msg);					
+					out.writeObject(msg);
 					//lsim.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
 
-					synchronized(serverData){ //to synchronize for avoiding interference (Two actions issued by different threads may interleave)
+					synchronized(serverData) { //to synchronize for avoiding interference (Two actions issued by different threads may interleave)
 						for(Operation op : ops){
 							serverData.execOperation(op);
 						}
 						serverData.getSummary().updateMax(originator.getSummary());
 						serverData.getAck().updateMax(originator.getAck());
-						//serverData.getLog().purgeLog(serverData.getAck()); *TO ADD for phase 3: purge log
+						serverData.getLog().purgeLog(serverData.getAck()); //TO ADD for phase 3: purge log
 					}
-				}	
+				}
 			}
-			socket.close();		
+			socket.close();
 		} catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			//lsim.log(Level.FATAL, "[TSAESessionPartnerSide] [session: "+current_session_number+"]" + e.getMessage());
 			e.printStackTrace();
             System.exit(1);
 		}catch (IOException e) {
-	    }
-		
+		}
+
 		//lsim.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] End TSAE session");
 	}
 }
