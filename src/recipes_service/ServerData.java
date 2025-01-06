@@ -139,20 +139,21 @@ public class ServerData {
 	// *** add and remove recipes
 	// ******************************
 	public void addRecipe(String recipeTitle, String recipe) {
-        if (recipeTitle == null || recipe == null) {
-            LSimLogger.log(Level.WARN, "Invalid recipe input.");
-            return;
-        }
+		if (recipeTitle == null || recipe == null) {
+			LSimLogger.log(Level.WARN, "Attempted to add a recipe with null values: title=" + recipeTitle + ", recipe=" + recipe);
+			return;
+		}
 
-        Timestamp timestamp = nextTimestamp();
-        Recipe rcpe = new Recipe(recipeTitle, recipe, id, timestamp);
-        Operation op = new AddOperation(rcpe, timestamp);
+		Timestamp timestamp = nextTimestamp();
+		Recipe rcpe = new Recipe(recipeTitle, recipe, id, timestamp);
+		Operation op = new AddOperation(rcpe, timestamp);
 
-        log.add(op);
-        summary.updateTimestamp(timestamp);
-        recipes.add(rcpe);
-        LSimLogger.log(Level.TRACE, "Recipe '" + recipeTitle + "' added.");
-    }
+		log.add(op);
+		summary.updateTimestamp(timestamp);
+		recipes.add(rcpe);
+
+		LSimLogger.log(Level.INFO, String.format("Recipe added: Title='%s', Author='%s', Timestamp=%s", recipeTitle, id, timestamp));
+	}
 
 	public synchronized void removeRecipe(String recipeTitle){
 		System.err.println("Error: removeRecipe method (recipesService.serverData) not yet implemented");
@@ -168,11 +169,18 @@ public class ServerData {
 	}
 
 	private synchronized void purgeTombstones() {
-		if (ack == null) return;
+		if (ack == null) {
+			LSimLogger.log(Level.WARN, "Attempted to purge tombstones with null ACK structure.");
+			return;
+		}
 
 		TimestampVector minAckVector = ack.minTimestampVector();
-		tombstones.removeIf(ts -> ts.compare(minAckVector.getLast(ts.getHostid())) <= 0);
+		tombstones.removeIf(ts -> {
+			Timestamp lastAck = minAckVector.getLast(ts.getHostid());
+			return lastAck != null && ts.compare(lastAck) <= 0;
+		});
 	}
+
 
 	// ****************************************************************************
 	// *** operations to get the TSAE data structures. Used to send to evaluation
@@ -261,15 +269,26 @@ public class ServerData {
 	// *******************
 
 	public void execOperation(Operation op) {
+		if (op == null) {
+			LSimLogger.log(Level.WARN, "Attempted to execute a null operation.");
+			return;
+		}
+
 		if (op instanceof AddOperation) {
 			AddOperation addOp = (AddOperation) op;
 			Recipe rcpe = new Recipe(addOp.getRecipe().getTitle(), addOp.getRecipe().getRecipe(), addOp.getRecipe().getAuthor(), addOp.getRecipe().getTimestamp());
-			recipes.add(rcpe);
-			log.add(op);
+			this.recipes.add(rcpe);
+			this.summary.updateTimestamp(addOp.getRecipe().getTimestamp());
+			this.log.add(op);
+			this.ack.update(id, summary);
 		} else if (op instanceof RemoveOperation) {
 			RemoveOperation removeOp = (RemoveOperation) op;
-			recipes.remove(removeOp.getRecipeTitle());
+			removeRecipe(removeOp.getRecipeTitle());
+			ack.update(id, summary);
+		} else {
+			LSimLogger.log(Level.WARN, "Unknown operation type executed: " + op.getClass().getName());
 		}
 	}
+
 
 }
