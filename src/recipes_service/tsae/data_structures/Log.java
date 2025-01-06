@@ -87,10 +87,20 @@ public class Log implements Serializable {
         String hostId = op.getTimestamp().getHostid();
         CopyOnWriteArrayList<Operation> opeList = log.computeIfAbsent(hostId, k -> new CopyOnWriteArrayList<>());
 
+        if (opeList.stream().anyMatch(existingOp -> existingOp.getTimestamp().equals(op.getTimestamp()))) {
+            LSimLogger.log(Level.WARN, "Duplicate operation detected: " + op);
+            return false; // Duplicate timestamp, ignore the operation
+        }
+
         if (opeList.isEmpty() || opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
             opeList.add(op);
+            LSimLogger.log(Level.INFO, String.format("Operation added: Host='%s', Timestamp='%s'. Current size: %d",
+                    hostId, op.getTimestamp(), opeList.size()));
             return true;
         }
+
+        LSimLogger.log(Level.WARN, String.format("Operation rejected due to out-of-order timestamp: Host='%s', Timestamp='%s'",
+                hostId, op.getTimestamp()));
         return false;
     }
 
@@ -110,13 +120,13 @@ public class Log implements Serializable {
             for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
                 String id = entry.getKey();
                 CopyOnWriteArrayList<Operation> opeList = entry.getValue();
-                if (opeList.isEmpty())
-                    continue;
+                if (opeList.isEmpty()) continue;
 
                 Timestamp lastSeen = sum.getLast(id);
                 for (Operation op : opeList) {
                     if (op.getTimestamp().compare(lastSeen) > 0) {
                         newList.add(op);
+                        LSimLogger.log(Level.TRACE, "Operation newer than summary found: " + op);
                     }
                 }
             }
@@ -135,6 +145,11 @@ public class Log implements Serializable {
      * @param ack: ackSummary.
      */
     public void purgeLog(TimestampMatrix ack) {
+        if (ack == null) {
+            LSimLogger.log(Level.WARN, "Attempted to purge log with null ACK matrix.");
+            return;
+        }
+
         lock.writeLock().lock();
         try {
             for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
@@ -142,8 +157,26 @@ public class Log implements Serializable {
                 CopyOnWriteArrayList<Operation> opeList = entry.getValue();
 
                 TimestampVector ackVector = ack.getTimestampVector(id);
-                opeList.removeIf(
-                        op -> op.getTimestamp().compare(ackVector.getLast(op.getTimestamp().getHostid())) <= 0);
+                if (ackVector == null) {
+                    LSimLogger.log(Level.WARN, "ACK vector not found for host: " + id);
+                    continue;
+                }
+
+                int initialSize = opeList.size();
+                opeList.removeIf(op -> {
+                    Timestamp lastAck = ackVector.getLast(op.getTimestamp().getHostid());
+                    if (lastAck == null || op.getTimestamp().compare(lastAck) > 0) {
+                        return false;
+                    }
+                    LSimLogger.log(Level.TRACE, String.format("Purging operation: Host='%s', Operation='%s', LastAck='%s'",
+                            id, op, lastAck));
+                    return true;
+                });
+
+                if (opeList.size() < initialSize) {
+                    LSimLogger.log(Level.INFO, String.format("Purged %d operations for host '%s'. Remaining size: %d",
+                            initialSize - opeList.size(), id, opeList.size()));
+                }
             }
         } finally {
             lock.writeLock().unlock();
@@ -168,6 +201,46 @@ public class Log implements Serializable {
             lock.readLock().unlock();
         }
     }
+
+    /**
+     * Checks if the log contains an operation with the given timestamp.
+     *
+     * @param timestamp the timestamp to check for.
+     * @return true if the log contains an operation with the given timestamp, false otherwise.
+     */
+    public boolean contains(Timestamp timestamp) {
+        if (timestamp == null) {
+            return false;
+        }
+
+        for (CopyOnWriteArrayList<Operation> operations : log.values()) {
+            for (Operation operation : operations) {
+                if (operation.getTimestamp().equals(timestamp)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Retrieves the timestamp of a given operation.
+     * Assumes the operation exists in the log.
+     *
+     * @param op the operation to retrieve the timestamp for.
+     * @return the timestamp of the operation, or null if not found.
+     */
+    public Timestamp getTimestampForOperation(Operation op) {
+        for (CopyOnWriteArrayList<Operation> operations : log.values()) {
+            for (Operation operation : operations) {
+                if (operation.equals(op)) {
+                    return operation.getTimestamp();
+                }
+            }
+        }
+        return null;
+    }
+
 
     /**
      * toString
