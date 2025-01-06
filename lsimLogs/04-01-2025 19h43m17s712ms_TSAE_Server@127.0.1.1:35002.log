@@ -1,9 +1,0 @@
-04-01-2025 19:43:17:733 TSAE_Server@127.0.1.1:35002 [INFO] : -- *** --> Server -- local node: [127.0.1.1,35002,Server@127.0.1.1:35002]
-04-01-2025 19:43:17:733 TSAE_Server@127.0.1.1:35002 [INFO] : -- *** --> Server -- participants: [Server@127.0.1.1:35000, Server@127.0.1.1:35001, Server@127.0.1.1:35002]
-04-01-2025 19:43:17:735 TSAE_Server@127.0.1.1:35002 [TRACE] : [TSAESessionOriginatorSide] [session: 1] TSAE session
-04-01-2025 19:43:17:737 TSAE_Server@127.0.1.1:35002 [TRACE] : [TSAESessionPartnerSide] [session: 1] TSAE session
-04-01-2025 19:43:17:739 TSAE_Server@127.0.1.1:35002 [TRACE] : [TSAESessionOriginatorSide] [session: 1] sent message: MessageAErequest [session: 1, summary=null]
-04-01-2025 19:43:17:739 TSAE_Server@127.0.1.1:35002 [TRACE] : [TSAESessionPartnerSide] [session: 1] received message: MessageAErequest [session: 1, summary=null]
-04-01-2025 19:43:17:740 TSAE_Server@127.0.1.1:35002 [TRACE] : [TSAESessionPartnerSide] [session: 1] sent message: MessageAErequest [session: 1, summary=null]
-04-01-2025 19:43:17:778 TSAE_Server@127.0.1.1:35002 [TRACE] : [TSAESessionOriginatorSide] [session: 1] received message: MessageAErequest [session: 1, summary=null]
-04-01-2025 19:43:57:055 TSAE_Server@127.0.1.1:35002 [TRACE] : [TSAESessionPartnerSide] [session: 1] End TSAE session
