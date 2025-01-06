@@ -65,83 +65,83 @@ public class TSAESessionPartnerSide extends Thread{
 
 		int current_session_number = -1;
 		try {
+			// Initialize output and input streams for communication
 			ObjectOutputStream_DS out = new ObjectOutputStream_DS(socket.getOutputStream());
 			ObjectInputStream_DS in = new ObjectInputStream_DS(socket.getInputStream());
 
-			//to synchronize for avoiding interference (Two actions issued by different threads may interleave)
+			// Synchronize to avoid interference between threads
 			TimestampVector localSummary;
 			TimestampMatrix localAck;
 			
 			synchronized(serverData){
-				localSummary=this.serverData.getSummary().clone();
-				serverData.getAck().update(serverData.getId(),localSummary);
-				localAck=this.serverData.getAck().clone();
+				// Clone the local summary and update the acknowledgment matrix
+				localSummary = this.serverData.getSummary().clone();
+				serverData.getAck().update(serverData.getId(), localSummary);
+				localAck = this.serverData.getAck().clone();
 			}
+			
 			// Receive request from originator and update local state
-			// First receive originator's summary and ack
+			// First, receive originator's summary and acknowledgment
 			msg = (Message) in.readObject();
 			current_session_number = msg.getSessionNumber();
-			//LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] TSAE session");
-			//LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] received message: "+ msg);
+			
 			if (msg.type() == MsgType.AE_REQUEST){
-				// ... If AE_request (Anti Entropy Session Request message) DO
-				MessageAErequest originator=(MessageAErequest)msg;
-				List<Operation> operations=serverData.getLog().listNewer(originator.getSummary());
-	            // send operations
-				for (Operation op:operations){
-					msg=new MessageOperation(op); //create new object (operation message)
-					msg.setSessionNumber(current_session_number); //Exchange order with next one. First set sessionNumber
-					out.writeObject(msg);
-					//lsim.log(Level.TRACE,"[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
+				// If AE_REQUEST (Anti Entropy Session Request message) is received
+				MessageAErequest originator = (MessageAErequest) msg;
+				// List operations that are newer than the originator's summary
+				List<Operation> operations = serverData.getLog().listNewer(originator.getSummary());
+	            
+				// Send operations to the originator
+				for (Operation op : operations){
+					msg = new MessageOperation(op); // Create a new operation message
+					msg.setSessionNumber(current_session_number); // Set session number
+					out.writeObject(msg); // Send the message
 				}
 
-				// send to originator: local's summary and ack
-				//Next 2 lines passed upstream before synchronize.  
-				//TimestampVector localSummary = null; 
-				//TimestampMatrix localAck = null;
-				msg = new MessageAErequest(localSummary, localAck); //create new request
+				// Send local's summary and acknowledgment to the originator
+				msg = new MessageAErequest(localSummary, localAck); // Create a new request
 				msg.setSessionNumber(current_session_number);
 				out.writeObject(msg);
-				//lsim.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
 
-	            // receive operations
-				List<Operation> ops=new ArrayList<Operation>(); //create new object (array of operations)
+	            // Receive operations from the originator
+				List<Operation> ops = new ArrayList<Operation>(); // Create a new list for operations
 				msg = (Message) in.readObject();
-				//lsim.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] received message: "+ msg);
+				
 				while (msg.type() == MsgType.OPERATION){
-					Operation op=((MessageOperation)msg).getOperation(); 
-					ops.add(op); 			//First add operation (addRecipe)
+					// Add received operations to the list
+					Operation op = ((MessageOperation) msg).getOperation(); 
+					ops.add(op);
 					msg = (Message) in.readObject();
-					//lsim.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] received message: "+ msg);
 				}
 				
-				// receive message to inform about the ending of the TSAE session
+				// Receive message indicating the end of the TSAE session
 				if (msg.type() == MsgType.END_TSAE){
-					// send and "end of TSAE session" message
+					// Send an "end of TSAE session" message
 					msg = new MessageEndTSAE();
 					msg.setSessionNumber(current_session_number);
-		            out.writeObject(msg);					
-					//lsim.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] sent message: "+ msg);
+		            out.writeObject(msg);
 
-					synchronized(serverData){ //to synchronize for avoiding interference (Two actions issued by different threads may interleave)
+					// Synchronize to avoid interference between threads
+					synchronized(serverData){
+						// Execute received operations
 						for(Operation op : ops){
 							serverData.execOperation(op);
 						}
+						// Update local summary and acknowledgment matrix with originator's data
 						serverData.getSummary().updateMax(originator.getSummary());
 						serverData.getAck().updateMax(originator.getAck());
-						//serverData.getLog().purgeLog(serverData.getAck()); *TO ADD for phase 3: purge log
+						// serverData.getLog().purgeLog(serverData.getAck()); // To be added in phase 3: purge log
 					}
 				}	
 			}
+			// Close the socket after the session ends
 			socket.close();		
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			//lsim.log(Level.FATAL, "[TSAESessionPartnerSide] [session: "+current_session_number+"]" + e.getMessage());
+			// Handle ClassNotFoundException
 			e.printStackTrace();
             System.exit(1);
-		}catch (IOException e) {
-	    }
-		
-		//lsim.log(Level.TRACE, "[TSAESessionPartnerSide] [session: "+current_session_number+"] End TSAE session");
+		} catch (IOException e) {
+			// Handle IOException
+		}
 	}
 }

@@ -91,93 +91,99 @@ public class TSAESessionOriginatorSide extends TimerTask {
      * This method performs a TSAE session
      * with the partner server n
      * 
-     * @param n
+     * @param n the partner server to perform the session with
      */
     private void sessionTSAE(Host n) {
+        // Increment the session number for the current session
         int current_session_number = session_number.incrementAndGet();
         if (n == null)
-            return;
+            return; // Exit if the partner server is null
 
+        // Log the start of the TSAE session
         LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] TSAE session");
 
         try {
+            // Establish a socket connection to the partner server
             Socket socket = new Socket(n.getAddress(), n.getPort());
             ObjectInputStream_DS in = new ObjectInputStream_DS(socket.getInputStream());
             ObjectOutputStream_DS out = new ObjectOutputStream_DS(socket.getOutputStream());
 
-            // Send to partner: local's summary and ack
+            // Prepare and send the local summary and acknowledgment to the partner
             TimestampVector localSummary;
             TimestampMatrix localAck;
             synchronized (serverData) {
-                localSummary = serverData.getSummary().clone();
-                localAck = serverData.getAck().clone();
+                localSummary = serverData.getSummary().clone(); // Clone the local summary
+                localAck = serverData.getAck().clone(); // Clone the local acknowledgment
             }
             Message msg = new MessageAErequest(localSummary, localAck);
             msg.setSessionNumber(current_session_number);
-            out.writeObject(msg);
+            out.writeObject(msg); // Send the message to the partner
             LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] sent message: " + msg);
 
-            // Receive operations from partner
+            // Receive operations from the partner
             msg = (Message) in.readObject();
             LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] received message: " + msg);
             while (msg.type() == MsgType.OPERATION) {
+                // Process each operation received
                 MessageOperation operationMsg = (MessageOperation) msg;
                 Operation operation = operationMsg.getOperation();
                 synchronized (serverData) {
-                    serverData.getLog().add(operation);
+                    serverData.getLog().add(operation); // Add the operation to the log
                 }
-                msg = (Message) in.readObject();
+                msg = (Message) in.readObject(); // Read the next message
                 LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] received message: " + msg);
             }
 
-            // Receive partner's summary and ack
+            // Check if the received message is a summary and acknowledgment request
             if (msg.type() == MsgType.AE_REQUEST) {
                 MessageAErequest partner = (MessageAErequest) msg;
 
-                // Get operations newer than partner's summary
+                // Retrieve operations that are newer than the partner's summary
                 List<Operation> newOperations;
                 synchronized (serverData) {
                     newOperations = serverData.getLog().listNewer(partner.getSummary());
                 }
 
-                // Send operations to partner
+                // Send the newer operations to the partner
                 if (newOperations != null) {
                     for (Operation operation : newOperations) {
                         MessageOperation operationMsg = new MessageOperation(operation);
                         operationMsg.setSessionNumber(current_session_number);
-                        out.writeObject(operationMsg);
+                        out.writeObject(operationMsg); // Send each operation
                     }
                 }
 
-                // Send end of TSAE session message
+                // Send an end of TSAE session message to the partner
                 msg = new MessageEndTSAE();
                 msg.setSessionNumber(current_session_number);
                 out.writeObject(msg);
                 LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] sent message: " + msg);
 
-                // Receive end of session confirmation
+                // Receive confirmation of the end of the session from the partner
                 msg = (Message) in.readObject();
                 LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] received message: " + msg);
                 if (msg.type() == MsgType.END_TSAE) {
                     synchronized (serverData) {
-                        // Update summary vector with partner's summary
+                        // Update the local summary and acknowledgment with the partner's data
                         serverData.getSummary().updateMax(partner.getSummary());
-                        // Update ack matrix with partner's ack
                         serverData.getAck().updateMax(partner.getAck());
-                        // Purge log
+                        // Purge the log of acknowledged operations
                         serverData.getLog().purgeLog(serverData.getAck());
                     }
                 }
             }
-            socket.close();
+            socket.close(); // Close the socket connection
         } catch (ClassNotFoundException e) {
+            // Log and handle the exception if a class is not found during deserialization
             LSimLogger.log(Level.FATAL, "[TSAESessionOriginatorSide] [session: " + current_session_number + "]" + e.getMessage());
             e.printStackTrace();
-            System.exit(1);
+            System.exit(1); // Exit the program on fatal error
         } catch (IOException e) {
+            // Log a warning if an I/O exception occurs
             LSimLogger.log(Level.WARN, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] IOException: " + e.getMessage());
         }
 
+        // Log the end of the TSAE session
         LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] End TSAE session");
     }
 }

@@ -268,24 +268,40 @@ public class ServerData {
 	// *** PERS
 	// *******************
 
+	// Executes the given operation on the server data
 	public void execOperation(Operation op) {
+		// Check if the operation is null and log a warning if so
 		if (op == null) {
 			LSimLogger.log(Level.WARN, "Attempted to execute a null operation.");
 			return;
 		}
 
+		// Check if the operation is an AddOperation
 		if (op instanceof AddOperation) {
+			// Cast the operation to AddOperation
 			AddOperation addOp = (AddOperation) op;
+			// Create a new Recipe object from the AddOperation
 			Recipe rcpe = new Recipe(addOp.getRecipe().getTitle(), addOp.getRecipe().getRecipe(), addOp.getRecipe().getAuthor(), addOp.getRecipe().getTimestamp());
+			// Add the new recipe to the recipes list
 			this.recipes.add(rcpe);
+			// Update the summary with the timestamp of the added recipe
 			this.summary.updateTimestamp(addOp.getRecipe().getTimestamp());
+			// Add the operation to the log
 			this.log.add(op);
+			// Update the acknowledgment matrix with the current summary
 			this.ack.update(id, summary);
-		} else if (op instanceof RemoveOperation) {
+		} 
+		// Check if the operation is a RemoveOperation
+		else if (op instanceof RemoveOperation) {
+			// Cast the operation to RemoveOperation
 			RemoveOperation removeOp = (RemoveOperation) op;
+			// Remove the recipe with the specified title
 			removeRecipe(removeOp.getRecipeTitle());
+			// Update the acknowledgment matrix with the current summary
 			ack.update(id, summary);
-		} else {
+		} 
+		// Log a warning if the operation type is unknown
+		else {
 			LSimLogger.log(Level.WARN, "Unknown operation type executed: " + op.getClass().getName());
 		}
 	}

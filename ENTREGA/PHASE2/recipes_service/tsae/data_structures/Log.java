@@ -75,22 +75,28 @@ public class Log implements Serializable {
     }
 
     /**
-     * inserts an operation into the log. Operations are
+     * Inserts an operation into the log. Operations are
      * inserted in order. If the last operation for
      * the user is not the previous operation than the one
      * being inserted, the insertion will fail.
      *
-     * @param op
-     * @return true if op is inserted, false otherwise.
+     * @param op the operation to be inserted into the log
+     * @return true if the operation is inserted, false otherwise
      */
     public boolean add(Operation op) {
+        // Retrieve the host ID from the operation's timestamp
         String hostId = op.getTimestamp().getHostid();
+        
+        // Get the list of operations for the host ID, or create a new list if it doesn't exist
         CopyOnWriteArrayList<Operation> opeList = log.computeIfAbsent(hostId, k -> new CopyOnWriteArrayList<>());
 
+        // Check if the list is empty or if the last operation's timestamp is less than the new operation's timestamp
         if (opeList.isEmpty() || opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
+            // Add the operation to the list
             opeList.add(op);
             return true;
         }
+        // Return false if the operation cannot be inserted in order
         return false;
     }
 
@@ -100,20 +106,29 @@ public class Log implements Serializable {
      * the proprietary of the summary.
      * Returns them in an ordered list.
      * 
-     * @param sum
-     * @return list of operations
+     * @param sum the summary vector to compare against
+     * @return list of operations that are newer than the summary
      */
     public List<Operation> listNewer(TimestampVector sum) {
+        // Create a new list to store operations that are newer than the summary
         List<Operation> newList = new ArrayList<>();
+        
+        // Acquire a read lock to ensure thread safety
         lock.readLock().lock();
         try {
+            // Iterate over each entry in the log
             for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
                 String id = entry.getKey();
                 CopyOnWriteArrayList<Operation> opeList = entry.getValue();
+                
+                // Skip empty operation lists
                 if (opeList.isEmpty())
                     continue;
 
+                // Get the last seen timestamp for the current host ID
                 Timestamp lastSeen = sum.getLast(id);
+                
+                // Add operations that are newer than the last seen timestamp to the new list
                 for (Operation op : opeList) {
                     if (op.getTimestamp().compare(lastSeen) > 0) {
                         newList.add(op);
@@ -121,8 +136,10 @@ public class Log implements Serializable {
                 }
             }
         } finally {
+            // Release the read lock
             lock.readLock().unlock();
         }
+        // Return the list of newer operations
         return newList;
     }
 
@@ -132,39 +149,54 @@ public class Log implements Serializable {
      * of the group, according to the provided
      * ackSummary.
      * 
-     * @param ack: ackSummary.
+     * @param ack the acknowledgment matrix used to determine which operations to remove
      */
     public void purgeLog(TimestampMatrix ack) {
+        // Acquire a write lock to ensure thread safety during modification
         lock.writeLock().lock();
         try {
+            // Iterate over each entry in the log
             for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
                 String id = entry.getKey();
                 CopyOnWriteArrayList<Operation> opeList = entry.getValue();
 
+                // Get the acknowledgment vector for the current host ID
                 TimestampVector ackVector = ack.getTimestampVector(id);
+                
+                // Remove operations that have been acknowledged by all participants
                 opeList.removeIf(
                         op -> op.getTimestamp().compare(ackVector.getLast(op.getTimestamp().getHostid())) <= 0);
             }
         } finally {
+            // Release the write lock
             lock.writeLock().unlock();
         }
     }
 
     /**
-     * equals
+     * Checks if this log is equal to another object.
+     * 
+     * @param obj the object to compare with
+     * @return true if the logs are equal, false otherwise
      */
     @Override
     public boolean equals(Object obj) {
+        // Check if the objects are the same instance
         if (this == obj)
             return true;
+        
+        // Check if the object is null or of a different class
         if (obj == null || getClass() != obj.getClass())
             return false;
 
+        // Acquire a read lock to ensure thread safety
         lock.readLock().lock();
         try {
+            // Cast the object to a Log and compare the internal log structures
             Log other = (Log) obj;
             return log.equals(other.log);
         } finally {
+            // Release the read lock
             lock.readLock().unlock();
         }
     }

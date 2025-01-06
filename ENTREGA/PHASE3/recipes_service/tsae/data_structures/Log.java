@@ -75,23 +75,27 @@ public class Log implements Serializable {
     }
 
     /**
-     * inserts an operation into the log. Operations are
+     * Inserts an operation into the log. Operations are
      * inserted in order. If the last operation for
      * the user is not the previous operation than the one
      * being inserted, the insertion will fail.
      *
-     * @param op
+     * @param op the operation to be inserted into the log.
      * @return true if op is inserted, false otherwise.
      */
     public boolean add(Operation op) {
+        // Retrieve the host ID from the operation's timestamp
         String hostId = op.getTimestamp().getHostid();
+        // Get or create the list of operations for the host
         CopyOnWriteArrayList<Operation> opeList = log.computeIfAbsent(hostId, k -> new CopyOnWriteArrayList<>());
 
+        // Check for duplicate operations based on timestamp
         if (opeList.stream().anyMatch(existingOp -> existingOp.getTimestamp().equals(op.getTimestamp()))) {
             LSimLogger.log(Level.WARN, "Duplicate operation detected: " + op);
             return false; // Duplicate timestamp, ignore the operation
         }
 
+        // Ensure operations are added in order based on timestamp
         if (opeList.isEmpty() || opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
             opeList.add(op);
             LSimLogger.log(Level.INFO, String.format("Operation added: Host='%s', Timestamp='%s'. Current size: %d",
@@ -99,6 +103,7 @@ public class Log implements Serializable {
             return true;
         }
 
+        // Log a warning if the operation is out of order
         LSimLogger.log(Level.WARN, String.format("Operation rejected due to out-of-order timestamp: Host='%s', Timestamp='%s'",
                 hostId, op.getTimestamp()));
         return false;
@@ -110,19 +115,22 @@ public class Log implements Serializable {
      * the proprietary of the summary.
      * Returns them in an ordered list.
      * 
-     * @param sum
-     * @return list of operations
+     * @param sum the summary vector to compare against.
+     * @return list of operations that are newer than the summary.
      */
     public List<Operation> listNewer(TimestampVector sum) {
         List<Operation> newList = new ArrayList<>();
-        lock.readLock().lock();
+        lock.readLock().lock(); // Acquire read lock for thread safety
         try {
+            // Iterate over each host's operation list in the log
             for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
                 String id = entry.getKey();
                 CopyOnWriteArrayList<Operation> opeList = entry.getValue();
-                if (opeList.isEmpty()) continue;
+                if (opeList.isEmpty()) continue; // Skip empty lists
 
+                // Get the last seen timestamp for the host
                 Timestamp lastSeen = sum.getLast(id);
+                // Add operations that are newer than the last seen timestamp
                 for (Operation op : opeList) {
                     if (op.getTimestamp().compare(lastSeen) > 0) {
                         newList.add(op);
@@ -131,7 +139,7 @@ public class Log implements Serializable {
                 }
             }
         } finally {
-            lock.readLock().unlock();
+            lock.readLock().unlock(); // Release read lock
         }
         return newList;
     }
@@ -142,18 +150,18 @@ public class Log implements Serializable {
      * of the group, according to the provided
      * ackSummary.
      * 
-     * @param ack: ackSummary.
+     * @param ack the acknowledgment matrix.
      */
     public void purgeLog(TimestampMatrix ack) {
-        if (ack == null) return;
+        if (ack == null) return; // Return if ack is null
 
-        lock.writeLock().lock();
+        lock.writeLock().lock(); // Acquire write lock for thread safety
         try {
             // Get minimum timestamp vector from ack matrix
             TimestampVector minTimestampVector = ack.minTimestampVector();
-            if (minTimestampVector == null) return;
+            if (minTimestampVector == null) return; // Return if minTimestampVector is null
 
-            // For each host's operation list in the log
+            // Iterate over each host's operation list in the log
             for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
                 String hostId = entry.getKey();
                 CopyOnWriteArrayList<Operation> operations = entry.getValue();
@@ -166,26 +174,29 @@ public class Log implements Serializable {
                 });
             }
         } finally {
-            lock.writeLock().unlock();
+            lock.writeLock().unlock(); // Release write lock
         }
     }
 
     /**
-     * equals
+     * Checks if this log is equal to another object.
+     * 
+     * @param obj the object to compare with.
+     * @return true if the logs are equal, false otherwise.
      */
     @Override
     public boolean equals(Object obj) {
         if (this == obj)
-            return true;
+            return true; // Return true if the same object
         if (obj == null || getClass() != obj.getClass())
-            return false;
+            return false; // Return false if obj is null or not the same class
 
-        lock.readLock().lock();
+        lock.readLock().lock(); // Acquire read lock for thread safety
         try {
             Log other = (Log) obj;
-            return log.equals(other.log);
+            return log.equals(other.log); // Compare the log maps
         } finally {
-            lock.readLock().unlock();
+            lock.readLock().unlock(); // Release read lock
         }
     }
 
@@ -197,17 +208,19 @@ public class Log implements Serializable {
      */
     public boolean contains(Timestamp timestamp) {
         if (timestamp == null) {
-            return false;
+            return false; // Return false if timestamp is null
         }
 
+        // Iterate over each host's operation list in the log
         for (CopyOnWriteArrayList<Operation> operations : log.values()) {
+            // Check if any operation matches the given timestamp
             for (Operation operation : operations) {
                 if (operation.getTimestamp().equals(timestamp)) {
-                    return true;
+                    return true; // Return true if a match is found
                 }
             }
         }
-        return false;
+        return false; // Return false if no match is found
     }
 
     /**
@@ -218,14 +231,16 @@ public class Log implements Serializable {
      * @return the timestamp of the operation, or null if not found.
      */
     public Timestamp getTimestampForOperation(Operation op) {
+        // Iterate over each host's operation list in the log
         for (CopyOnWriteArrayList<Operation> operations : log.values()) {
+            // Check if the operation exists in the list
             for (Operation operation : operations) {
                 if (operation.equals(op)) {
-                    return operation.getTimestamp();
+                    return operation.getTimestamp(); // Return the timestamp if found
                 }
             }
         }
-        return null;
+        return null; // Return null if the operation is not found
     }
 
 

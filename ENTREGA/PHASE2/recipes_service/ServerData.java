@@ -260,14 +260,27 @@ public class ServerData {
 	// *** PERS
 	// *******************
 
+	/**
+	 * Executes the given operation.
+	 * If the operation is an AddOperation, it adds the recipe to the recipes list and logs the operation.
+	 * If the operation is a RemoveOperation, it removes the recipe from the recipes list.
+	 * 
+	 * @param op the operation to execute
+	 */
 	public void execOperation(Operation op) {
 		if (op instanceof AddOperation) {
+			// Cast the operation to AddOperation
 			AddOperation addOp = (AddOperation) op;
+			// Create a new Recipe object from the AddOperation
 			Recipe rcpe = new Recipe(addOp.getRecipe().getTitle(), addOp.getRecipe().getRecipe(), addOp.getRecipe().getAuthor(), addOp.getRecipe().getTimestamp());
+			// Add the recipe to the recipes list
 			recipes.add(rcpe);
+			// Log the operation
 			log.add(op);
 		} else if (op instanceof RemoveOperation) {
+			// Cast the operation to RemoveOperation
 			RemoveOperation removeOp = (RemoveOperation) op;
+			// Remove the recipe from the recipes list
 			recipes.remove(removeOp.getRecipeTitle());
 		}
 	}

@@ -30,13 +30,17 @@ public class TimestampVector implements Serializable {
 
     /**
      * Updates the timestamp in the vector if it is more recent.
+     * 
+     * @param timestamp the new timestamp to potentially update the vector with
      */
     public void updateTimestamp(Timestamp timestamp) {
         if (timestamp == null) {
+            // Log a warning if the provided timestamp is null
             LSimLogger.log(Level.WARN, "Attempted to update TimestampVector with a null timestamp.");
             return;
         }
 
+        // Update the timestamp for the host ID if the new timestamp is more recent
         timestampVector.compute(timestamp.getHostid(), (id, currentTS) -> {
             if (currentTS == null || timestamp.compare(currentTS) > 0) {
                 return timestamp;
@@ -46,31 +50,42 @@ public class TimestampVector implements Serializable {
     }
 
     /**
-     * Returns the ConcurrentHashMap containing all timestamps
+     * Returns the ConcurrentHashMap containing all timestamps.
+     * 
+     * @return the map of host IDs to their respective timestamps
      */
     public ConcurrentHashMap<String, Timestamp> getTimestamps() {
         return timestampVector;
     }
 
     /**
-     * Updates the timestamp for a specific participant
+     * Updates the timestamp for a specific participant.
+     * 
+     * @param participant the ID of the participant
+     * @param timestamp the new timestamp to set for the participant
      */
     public void update(String participant, Timestamp timestamp) {
         if (participant == null || timestamp == null) {
+            // Do nothing if either the participant or timestamp is null
             return;
         }
+        // Update the timestamp for the given participant
         timestampVector.put(participant, timestamp);
     }
 
     /**
      * Merges the received vector, keeping the maximum for each hostId.
+     * 
+     * @param tsVector the incoming TimestampVector to merge with
      */
     public void updateMax(TimestampVector tsVector) {
         if (tsVector == null) {
+            // Log a warning if the provided TimestampVector is null
             LSimLogger.log(Level.WARN, "Attempted to merge with a null TimestampVector.");
             return;
         }
 
+        // For each entry in the incoming vector, update the local vector with the maximum timestamp
         tsVector.timestampVector.forEach((id, incomingTS) -> timestampVector.compute(id,
                 (key, localTS) -> {
                     if (incomingTS != null && (localTS == null || incomingTS.compare(localTS) > 0)) {
@@ -82,6 +97,9 @@ public class TimestampVector implements Serializable {
 
     /**
      * Returns the last known timestamp for the given node.
+     * 
+     * @param node the ID of the node
+     * @return the last known timestamp for the node
      */
     public Timestamp getLast(String node) {
         return timestampVector.get(node);
@@ -89,13 +107,17 @@ public class TimestampVector implements Serializable {
 
     /**
      * Merges the received vector, keeping the minimum for each hostId.
+     * 
+     * @param tsVector the incoming TimestampVector to merge with
      */
     public void mergeMin(TimestampVector tsVector) {
         if (tsVector == null) {
+            // Log a warning if the provided TimestampVector is null
             LSimLogger.log(Level.WARN, "Attempted to mergeMin with a null TimestampVector.");
             return;
         }
 
+        // For each entry in the incoming vector, update the local vector with the minimum timestamp
         tsVector.timestampVector.forEach((id, incomingTS) -> timestampVector.compute(id,
                 (key, localTS) -> {
                     if (incomingTS == null) {
@@ -110,12 +132,19 @@ public class TimestampVector implements Serializable {
                 }));
     }
 
+    /**
+     * Updates the vector with the maximum timestamp for each hostId, with tolerance.
+     * 
+     * @param tsVector the incoming TimestampVector to merge with
+     */
     public void updateMaxWithTolerance(TimestampVector tsVector) {
         if (tsVector == null) {
+            // Log a warning if the provided TimestampVector is null
             LSimLogger.log(Level.WARN, "Attempted to updateMaxWithTolerance with a null TimestampVector.");
             return;
         }
 
+        // For each entry in the incoming vector, update the local vector with the maximum timestamp
         tsVector.timestampVector.forEach((id, incomingTS) -> timestampVector.compute(id,
                 (key, localTS) -> {
                     if (incomingTS == null) {
@@ -132,13 +161,17 @@ public class TimestampVector implements Serializable {
 
     /**
      * Returns a clone of this TimestampVector.
+     * 
+     * @return a new TimestampVector that is a copy of this one
      */
     @Override
     public TimestampVector clone() {
         lock.readLock().lock();
         try {
+            // Create a new TimestampVector with the same keys
             TimestampVector cloned = new TimestampVector(
                     Arrays.asList(timestampVector.keySet().toArray(new String[0])));
+            // Copy each timestamp to the new vector
             timestampVector.forEach(cloned.timestampVector::put);
             return cloned;
         } finally {
@@ -146,9 +179,11 @@ public class TimestampVector implements Serializable {
         }
     }
 
-
     /**
      * Checks equality between two TimestampVectors.
+     * 
+     * @param obj the object to compare with
+     * @return true if the vectors are equal, false otherwise
      */
     @Override
     public boolean equals(Object obj) {
@@ -159,6 +194,7 @@ public class TimestampVector implements Serializable {
 
         lock.readLock().lock();
         try {
+            // Compare the internal maps for equality
             TimestampVector comp = (TimestampVector) obj;
             return timestampVector.equals(comp.timestampVector);
         } finally {
