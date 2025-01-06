@@ -145,38 +145,25 @@ public class Log implements Serializable {
      * @param ack: ackSummary.
      */
     public void purgeLog(TimestampMatrix ack) {
-        if (ack == null) {
-            LSimLogger.log(Level.WARN, "Attempted to purge log with null ACK matrix.");
-            return;
-        }
+        if (ack == null) return;
 
         lock.writeLock().lock();
         try {
+            // Get minimum timestamp vector from ack matrix
+            TimestampVector minTimestampVector = ack.minTimestampVector();
+            if (minTimestampVector == null) return;
+
+            // For each host's operation list in the log
             for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
-                String id = entry.getKey();
-                CopyOnWriteArrayList<Operation> opeList = entry.getValue();
+                String hostId = entry.getKey();
+                CopyOnWriteArrayList<Operation> operations = entry.getValue();
 
-                TimestampVector ackVector = ack.getTimestampVector(id);
-                if (ackVector == null) {
-                    LSimLogger.log(Level.WARN, "ACK vector not found for host: " + id);
-                    continue;
-                }
-
-                int initialSize = opeList.size();
-                opeList.removeIf(op -> {
-                    Timestamp lastAck = ackVector.getLast(op.getTimestamp().getHostid());
-                    if (lastAck == null || op.getTimestamp().compare(lastAck) > 0) {
-                        return false;
-                    }
-                    LSimLogger.log(Level.TRACE, String.format("Purging operation: Host='%s', Operation='%s', LastAck='%s'",
-                            id, op, lastAck));
-                    return true;
+                // Remove operations that have been acknowledged by all participants
+                operations.removeIf(op -> {
+                    String opHostId = op.getTimestamp().getHostid();
+                    Timestamp minAck = minTimestampVector.getLast(opHostId);
+                    return minAck != null && op.getTimestamp().compare(minAck) <= 0;
                 });
-
-                if (opeList.size() < initialSize) {
-                    LSimLogger.log(Level.INFO, String.format("Purged %d operations for host '%s'. Remaining size: %d",
-                            initialSize - opeList.size(), id, opeList.size()));
-                }
             }
         } finally {
             lock.writeLock().unlock();

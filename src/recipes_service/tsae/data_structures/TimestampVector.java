@@ -32,37 +32,53 @@ public class TimestampVector implements Serializable {
      * Updates the timestamp in the vector if it is more recent.
      */
     public void updateTimestamp(Timestamp timestamp) {
-    if (timestamp == null) {
-        LSimLogger.log(Level.WARN, "Attempted to update TimestampVector with a null timestamp.");
-        return;
+        if (timestamp == null) {
+            LSimLogger.log(Level.WARN, "Attempted to update TimestampVector with a null timestamp.");
+            return;
+        }
+
+        timestampVector.compute(timestamp.getHostid(), (id, currentTS) -> {
+            if (currentTS == null || timestamp.compare(currentTS) > 0) {
+                return timestamp;
+            }
+            return currentTS;
+        });
     }
 
-    timestampVector.compute(timestamp.getHostid(), (id, currentTS) -> {
-        if (currentTS == null || timestamp.compare(currentTS) > 0) {
-            return timestamp;
-        }
-        return currentTS;
-    });
-}
+    /**
+     * Returns the ConcurrentHashMap containing all timestamps
+     */
+    public ConcurrentHashMap<String, Timestamp> getTimestamps() {
+        return timestampVector;
+    }
 
+    /**
+     * Updates the timestamp for a specific participant
+     */
+    public void update(String participant, Timestamp timestamp) {
+        if (participant == null || timestamp == null) {
+            return;
+        }
+        timestampVector.put(participant, timestamp);
+    }
 
     /**
      * Merges the received vector, keeping the maximum for each hostId.
      */
     public void updateMax(TimestampVector tsVector) {
-    if (tsVector == null) {
-        LSimLogger.log(Level.WARN, "Attempted to merge with a null TimestampVector.");
-        return;
-    }
+        if (tsVector == null) {
+            LSimLogger.log(Level.WARN, "Attempted to merge with a null TimestampVector.");
+            return;
+        }
 
-    tsVector.timestampVector.forEach((id, incomingTS) -> timestampVector.compute(id,
-            (key, localTS) -> {
-                if (incomingTS != null && (localTS == null || incomingTS.compare(localTS) > 0)) {
-                    return incomingTS;
-                }
-                return localTS;
-            }));
-}
+        tsVector.timestampVector.forEach((id, incomingTS) -> timestampVector.compute(id,
+                (key, localTS) -> {
+                    if (incomingTS != null && (localTS == null || incomingTS.compare(localTS) > 0)) {
+                        return incomingTS;
+                    }
+                    return localTS;
+                }));
+    }
 
     /**
      * Returns the last known timestamp for the given node.

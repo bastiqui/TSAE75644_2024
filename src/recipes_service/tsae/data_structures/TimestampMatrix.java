@@ -61,33 +61,62 @@ public class TimestampMatrix implements Serializable {
      * @param tsMatrix
      */
     public synchronized void updateMax(TimestampMatrix tsMatrix) {
+        // For each node in the matrix being merged
         for (String node : tsMatrix.timestampMatrix.keySet()) {
-            timestampMatrix.merge(node, tsMatrix.getTimestampVector(node), (current, other) -> {
-                current.updateMax(other);
-                return current;
-            });
+            // Get or create timestamp vector for this node
+            TimestampVector currentVector = timestampMatrix.get(node);
+            if (currentVector == null) {
+                currentVector = new TimestampVector(new ArrayList<>(timestampMatrix.keySet()));
+                timestampMatrix.put(node, currentVector);
+            }
+            
+            // Update with max values from other matrix's vector
+            currentVector.updateMax(tsMatrix.getTimestampVector(node));
         }
     }
 
     /**
-     * Substitutes current timestamp vector of node for tsVector
-     * @param node
-     * @param tsVector
+     * Updates the timestamp vector of node with the given timestamp vector
+     * @param node Node to update
+     * @param tsVector New timestamp vector
      */
     public void update(String node, TimestampVector tsVector) {
         timestampMatrix.put(node, tsVector);
     }
 
+    /**
+     * Returns a timestamp vector containing, for each participant, 
+     * the minimum timestamp among all timestamp vectors in this matrix
+     */
     public synchronized TimestampVector minTimestampVector() {
-        TimestampVector minVector = new TimestampVector(new ArrayList<>(timestampMatrix.keySet()));
-        for (TimestampVector vector : timestampMatrix.values()) {
-            minVector.mergeMin(vector);
+        // Initialize result with first vector's values
+        if (timestampMatrix.isEmpty()) {
+            return null;
         }
+
+        // Create result vector with all participants
+        TimestampVector minVector = new TimestampVector(new ArrayList<>(timestampMatrix.keySet()));
+
+        // For each vector in the matrix
+        boolean first = true;
+        for (TimestampVector vector : timestampMatrix.values()) {
+            if (first) {
+                // Initialize with first vector's values
+                for (String participant : vector.getTimestamps().keySet()) {
+                    minVector.update(participant, vector.getLast(participant));
+                }
+                first = false;
+            } else {
+                // Take minimum values
+                minVector.mergeMin(vector);
+            }
+        }
+
         return minVector;
     }
 
     /**
-     * Clone
+     * Creates a deep clone of this timestamp matrix
      */
     @Override
     public synchronized TimestampMatrix clone() {
@@ -99,31 +128,31 @@ public class TimestampMatrix implements Serializable {
     }
 
     /**
-     * Equals
+     * Checks if this matrix equals another object
      */
     @Override
     public synchronized boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
-        TimestampMatrix otherMatrix = (TimestampMatrix) obj;
-        return timestampMatrix.equals(otherMatrix.timestampMatrix);
+        TimestampMatrix other = (TimestampMatrix) obj;
+        return timestampMatrix.equals(other.timestampMatrix);
     }
 
     /**
-     * toString
+     * Returns a string representation of this matrix
      */
     @Override
     public synchronized String toString() {
-        StringBuilder all = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         if (timestampMatrix == null) {
-            return all.toString();
+            return sb.toString();
         }
-        for (Enumeration<String> en = timestampMatrix.keys(); en.hasMoreElements(); ) {
-            String name = en.nextElement();
-            if (timestampMatrix.get(name) != null) {
-                all.append(name).append(":   ").append(timestampMatrix.get(name)).append("\n");
+        for (String node : timestampMatrix.keySet()) {
+            TimestampVector vector = timestampMatrix.get(node);
+            if (vector != null) {
+                sb.append(node).append(":   ").append(vector).append("\n");
             }
         }
-        return all.toString();
+        return sb.toString();
     }
 }
