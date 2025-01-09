@@ -20,7 +20,6 @@
 
 package recipes_service.tsae.sessions;
 
-
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Iterator;
@@ -45,10 +44,10 @@ import lsim.library.api.LSimLogger; //TODO check login system
 
 /**
  * @author Joan-Manuel Marques
- * December 2012
+ *         December 2012
  *
  */
-public class TSAESessionPartnerSide extends Thread{
+public class TSAESessionPartnerSide extends Thread {
 
 	private Socket socket = null;
 	private ServerData serverData = null;
@@ -73,27 +72,27 @@ public class TSAESessionPartnerSide extends Thread{
 			TimestampVector localSummary;
 			TimestampMatrix localAck;
 
-			synchronized(serverData){
+			synchronized (serverData) {
 				// Clone the local summary and update the acknowledgment matrix
 				localSummary = this.serverData.getSummary().clone();
 				serverData.getAck().update(serverData.getId(), localSummary);
 				localAck = this.serverData.getAck().clone();
 			}
-			
+
 			// Receive request from originator and update local state
 			// First, receive originator's summary and ack
 			msg = (Message) in.readObject();
 			current_session_number = msg.getSessionNumber();
-			
+
 			// Check if the message is an Anti Entropy Session Request
-			if (msg.type() == MsgType.AE_REQUEST){
+			if (msg.type() == MsgType.AE_REQUEST) {
 				// Cast the message to MessageAErequest
 				MessageAErequest originator = (MessageAErequest) msg;
 				// Get operations that are newer than the originator's summary
 				List<Operation> operations = serverData.getLog().listNewer(originator.getSummary());
-	            
+
 				// Send operations to the originator
-				for (Operation op : operations){
+				for (Operation op : operations) {
 					// Create a new operation message
 					msg = new MessageOperation(op);
 					// Set the session number for the message
@@ -107,12 +106,12 @@ public class TSAESessionPartnerSide extends Thread{
 				msg.setSessionNumber(current_session_number);
 				out.writeObject(msg);
 
-	            // Receive operations from the originator
+				// Receive operations from the originator
 				List<Operation> ops = new ArrayList<Operation>(); // Create a list to store received operations
 				msg = (Message) in.readObject();
-				
+
 				// Process each received operation
-				while (msg.type() == MsgType.OPERATION){
+				while (msg.type() == MsgType.OPERATION) {
 					// Extract the operation from the message
 					Operation op = ((MessageOperation) msg).getOperation();
 					// Add the operation to the list
@@ -122,23 +121,24 @@ public class TSAESessionPartnerSide extends Thread{
 				}
 
 				// Check if the message indicates the end of the TSAE session
-				if (msg.type() == MsgType.END_TSAE){
+				if (msg.type() == MsgType.END_TSAE) {
 					// Send an "end of TSAE session" message back to the originator
 					msg = new MessageEndTSAE();
 					msg.setSessionNumber(current_session_number);
 					out.writeObject(msg);
 
-					// Synchronize to update the server data
-					synchronized(serverData) {
+					synchronized (serverData) {
 						// Execute each received operation
-						for(Operation op : ops){
+						for (Operation op : ops) {
 							serverData.execOperation(op);
+							LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] executed operation: " + op);
 						}
 						// Update the local summary and acknowledgment matrix
 						serverData.getSummary().updateMax(originator.getSummary());
 						serverData.getAck().updateMax(originator.getAck());
 						// Purge the log based on the updated acknowledgment matrix
 						serverData.getLog().purgeLog(serverData.getAck());
+						LSimLogger.log(Level.TRACE, "[TSAESessionPartnerSide] updated summary and ack");
 					}
 				}
 			}
@@ -147,7 +147,7 @@ public class TSAESessionPartnerSide extends Thread{
 		} catch (ClassNotFoundException e) {
 			// Handle exception for class not found
 			e.printStackTrace();
-            System.exit(1);
+			System.exit(1);
 		} catch (IOException e) {
 			// Handle IO exception
 		}
