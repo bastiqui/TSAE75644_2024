@@ -36,6 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import recipes_service.data.Operation;
 import recipes_service.tsae.data_structures.TimestampMatrix;
 import recipes_service.tsae.data_structures.TimestampVector;
+import recipes_service.data.RemoveOperation;
 
 //LSim logging system imports sgeag@2017
 //import lsim.coordinator.LSimCoordinator;
@@ -84,29 +85,32 @@ public class Log implements Serializable {
      * @return true if op is inserted, false otherwise.
      */
     public boolean add(Operation op) {
-        // Retrieve the host ID from the operation's timestamp
-        String hostId = op.getTimestamp().getHostid();
-        // Get or create the list of operations for the host
-        CopyOnWriteArrayList<Operation> opeList = log.computeIfAbsent(hostId, k -> new CopyOnWriteArrayList<>());
+        lock.writeLock().lock(); // Acquire write lock for thread safety
+        try {
+            String hostId = op.getTimestamp().getHostid();
+            CopyOnWriteArrayList<Operation> opeList = log.computeIfAbsent(hostId, k -> new CopyOnWriteArrayList<>());
 
-        // Check for duplicate operations based on timestamp
-        if (opeList.stream().anyMatch(existingOp -> existingOp.getTimestamp().equals(op.getTimestamp()))) {
-            LSimLogger.log(Level.WARN, "Duplicate operation detected: " + op);
-            return false; // Duplicate timestamp, ignore the operation
+            // Check for duplicate operations based on timestamp
+            if (opeList.stream().anyMatch(existingOp -> existingOp.getTimestamp().equals(op.getTimestamp()))) {
+                LSimLogger.log(Level.WARN, "Duplicate operation detected: " + op);
+                return false; // Duplicate timestamp, ignore the operation
+            }
+
+            // Ensure operations are added in order based on timestamp
+            if (opeList.isEmpty() || opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
+                opeList.add(op);
+                LSimLogger.log(Level.INFO, String.format("Operation added: Host='%s', Timestamp='%s'. Current size: %d",
+                        hostId, op.getTimestamp(), opeList.size()));
+                return true;
+            }
+
+            // Log a warning if the operation is out of order
+            LSimLogger.log(Level.WARN, String.format("Operation rejected due to out-of-order timestamp: Host='%s', Timestamp='%s'",
+                    hostId, op.getTimestamp()));
+            return false;
+        } finally {
+            lock.writeLock().unlock(); // Release write lock
         }
-
-        // Ensure operations are added in order based on timestamp
-        if (opeList.isEmpty() || opeList.get(opeList.size() - 1).getTimestamp().compare(op.getTimestamp()) < 0) {
-            opeList.add(op);
-            LSimLogger.log(Level.INFO, String.format("Operation added: Host='%s', Timestamp='%s'. Current size: %d",
-                    hostId, op.getTimestamp(), opeList.size()));
-            return true;
-        }
-
-        // Log a warning if the operation is out of order
-        LSimLogger.log(Level.WARN, String.format("Operation rejected due to out-of-order timestamp: Host='%s', Timestamp='%s'",
-                hostId, op.getTimestamp()));
-        return false;
     }
 
     /**
@@ -122,15 +126,12 @@ public class Log implements Serializable {
         List<Operation> newList = new ArrayList<>();
         lock.readLock().lock(); // Acquire read lock for thread safety
         try {
-            // Iterate over each host's operation list in the log
             for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
                 String id = entry.getKey();
                 CopyOnWriteArrayList<Operation> opeList = entry.getValue();
-                if (opeList.isEmpty()) continue; // Skip empty lists
+                if (opeList.isEmpty()) continue;
 
-                // Get the last seen timestamp for the host
                 Timestamp lastSeen = sum.getLast(id);
-                // Add operations that are newer than the last seen timestamp
                 for (Operation op : opeList) {
                     if (op.getTimestamp().compare(lastSeen) > 0) {
                         newList.add(op);
@@ -153,20 +154,17 @@ public class Log implements Serializable {
      * @param ack the acknowledgment matrix.
      */
     public void purgeLog(TimestampMatrix ack) {
-        if (ack == null) return; // Return if ack is null
+        if (ack == null) return;
 
         lock.writeLock().lock(); // Acquire write lock for thread safety
         try {
-            // Get minimum timestamp vector from ack matrix
             TimestampVector minTimestampVector = ack.minTimestampVector();
-            if (minTimestampVector == null) return; // Return if minTimestampVector is null
+            if (minTimestampVector == null) return;
 
-            // Iterate over each host's operation list in the log
             for (Map.Entry<String, CopyOnWriteArrayList<Operation>> entry : log.entrySet()) {
                 String hostId = entry.getKey();
                 CopyOnWriteArrayList<Operation> operations = entry.getValue();
 
-                // Remove operations that have been acknowledged by all participants
                 operations.removeIf(op -> {
                     String opHostId = op.getTimestamp().getHostid();
                     Timestamp minAck = minTimestampVector.getLast(opHostId);
