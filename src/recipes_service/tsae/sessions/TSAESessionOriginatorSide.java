@@ -128,7 +128,7 @@ public class TSAESessionOriginatorSide extends TimerTask {
                 MessageOperation operationMsg = (MessageOperation) msg;
                 Operation operation = operationMsg.getOperation();
                 synchronized (serverData) {
-                    serverData.getLog().add(operation); // Add the operation to the log
+                    serverData.execOperation(operation); // Use execOperation to handle both add and remove
                 }
                 msg = (Message) in.readObject(); // Read the next message
                 LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] received message: " + msg);
@@ -150,6 +150,7 @@ public class TSAESessionOriginatorSide extends TimerTask {
                         MessageOperation operationMsg = new MessageOperation(operation);
                         operationMsg.setSessionNumber(current_session_number);
                         out.writeObject(operationMsg); // Send each operation
+                        LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] sent operation: " + operation);
                     }
                 }
 
@@ -169,6 +170,7 @@ public class TSAESessionOriginatorSide extends TimerTask {
                         serverData.getAck().updateMax(partner.getAck());
                         // Purge the log of acknowledged operations
                         serverData.getLog().purgeLog(serverData.getAck());
+                        LSimLogger.log(Level.TRACE, "[TSAESessionOriginatorSide] [session: " + current_session_number + "] updated summary and ack");
                     }
                 }
             }
