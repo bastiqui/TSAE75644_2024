@@ -155,17 +155,19 @@ public class ServerData {
 		LSimLogger.log(Level.INFO, String.format("Recipe added: Title='%s', Author='%s', Timestamp=%s", recipeTitle, id, timestamp));
 	}
 
-	public synchronized void removeRecipe(String recipeTitle){
-		System.err.println("Error: removeRecipe method (recipesService.serverData) not yet implemented");
-		/*
-		Recipe removedRecipe = recipes.remove(recipeTitle);
+	public synchronized void removeRecipe(String recipeTitle) {
+		Recipe removedRecipe = recipes.get(recipeTitle);
 		if (removedRecipe != null) {
+			Timestamp timestamp = nextTimestamp();
+			RemoveOperation removeOp = new RemoveOperation(recipeTitle, removedRecipe.getTimestamp(), timestamp);
+			log.add(removeOp);
+			summary.updateTimestamp(timestamp);
 			tombstones.add(removedRecipe.getTimestamp());
-			LSimLogger.log(Level.TRACE, "Recipe '" + recipeTitle + "' removed.");
+			recipes.remove(recipeTitle);
+			LSimLogger.log(Level.INFO, "Recipe removed: " + recipeTitle);
 		} else {
-			LSimLogger.log(Level.WARN, "Recipe not found: " + recipeTitle);
+			LSimLogger.log(Level.WARN, "Attempted to remove non-existent recipe: " + recipeTitle);
 		}
-		*/
 	}
 
 	private synchronized void purgeTombstones() {
